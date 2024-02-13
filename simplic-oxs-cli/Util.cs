@@ -5,6 +5,7 @@ using Simplic.Framework.DAL;
 using Simplic.Sql;
 using Simplic.Sql.SqlAnywhere.Service;
 using Simplic.Studio.Ox;
+using Spectre.Console;
 using Unity;
 using Unity.ServiceLocation;
 
@@ -19,19 +20,21 @@ namespace simplic_oxs_cli
         /// </summary>
         public static void InitializeFramework()
         {
-            Console.WriteLine("Initializing framework...");
+            AnsiConsole.Status().Start("Initializing framework", ctx =>
+            {
+                Thread.Sleep(1000);
+                container.RegisterType<ISqlService, SqlService>();
+                var locator = new UnityServiceLocator(container);
+                ServiceLocator.SetLocatorProvider(() => locator);
 
-            container.RegisterType<ISqlService, SqlService>();
-            var locator = new UnityServiceLocator(container);
-            ServiceLocator.SetLocatorProvider(() => locator);
+                // Initialize framework
+                GlobalSettings.UseIni = false;
+                GlobalSettings.UserId = 0;
+                GlobalSettings.MainThread = Thread.CurrentThread;
+                GlobalSettings.UserName = "ProjectCLI";
 
-            // Initialize framework
-            GlobalSettings.UseIni = false;
-            GlobalSettings.UserId = 0;
-            GlobalSettings.MainThread = Thread.CurrentThread;
-            GlobalSettings.UserName = "ProjectCLI";
-
-            Console.WriteLine("Initialized framework");
+                AnsiConsole.WriteLine("Initialized framework");
+            });
         }
 
         public static void SetConnectionString(string connection)
@@ -43,18 +46,18 @@ namespace simplic_oxs_cli
 
         public static void AddModule<TModule>() where TModule : IFrameworkEntryPoint, new()
         {
-            Console.WriteLine($"Registering module: {typeof(TModule).FullName}");
+            AnsiConsole.WriteLine($"Registering module: {typeof(TModule).FullName}");
 
             var module = new TModule();
             module.Initilize();
 
-            Console.WriteLine($"Registered module");
+            AnsiConsole.WriteLine($"Registered module");
         }
 
         public static void InitializeOxS()
         {
-            Console.WriteLine("Initializing OxS");
-            Console.WriteLine("Initialized OxS");
+            AnsiConsole.WriteLine("Initializing OxS");
+            AnsiConsole.WriteLine("Initialized OxS");
         }
 
         public static IEnumerable<IInstanceDataUploadService> GetAllServices()

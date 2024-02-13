@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="CommonServiceLocator" Version="2.0.7" />
+    <PackageReference Include="Dapper" Version="2.1.28" />
     <PackageReference Include="Sap.Data.SQLAnywhere.EF6" Version="17.0.10.63154" />
     <PackageReference Include="Simplic.Base" Version="8.1.323.125" />
     <PackageReference Include="Simplic.CoreLib" Version="7.3.122.1019" />
@@ -23,8 +24,11 @@
     <PackageReference Include="Simplic.Studio.Ox" Version="1.0.923.621" />
     <PackageReference Include="Simplic.Studio.Ox.Data.DB" Version="1.0.723.621" />
     <PackageReference Include="Simplic.Studio.Ox.Service" Version="1.0.1423.727" />
+    <PackageReference Include="Spectre.Console" Version="0.48.0" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.48.0" />
     <PackageReference Include="System.Data.Odbc" Version="8.0.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.3.1" />
     <PackageReference Include="System.Security.Permissions" Version="8.0.0" />
     <PackageReference Include="Unity" Version="5.11.10" />
     <PackageReference Include="Unity.ServiceLocation" Version="5.11.1" />

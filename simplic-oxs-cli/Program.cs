@@ -1,5 +1,6 @@
 ﻿using CommonServiceLocator;
 using Simplic.Studio.Ox;
+using Spectre.Console;
 
 namespace simplic_oxs_cli
 {
@@ -7,22 +8,35 @@ namespace simplic_oxs_cli
     {
         async static Task Main(string[] args)
         {
-            Console.WriteLine("Hello, World!");
+            AnsiConsole.WriteLine("Hello, World!");
+
             Util.InitializeFramework();
             Util.AddModule<Simplic.PlugIn.Studio.Ox.Server.FrameworkEntryPoint>();
             Util.InitializeOxS();
 
-            Util.SetConnectionString("UID=admin;PWD=school;Server=sc-dev02;dbn=simplic;ASTART=No;links=tcpip");
+            var selConn = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("Select Connection String")
+                    .AddChoices("Default", "Custom")
+            );
+
+            string connectionString;
+            if (selConn == "Default")
+                connectionString = "UID=admin;PWD=school;Server=sc-dev02;dbn=simplic;ASTART=No;links=tcpip";
+            else
+                connectionString = AnsiConsole.Prompt(new TextPrompt<string>("Input connection string"));
+
+            Util.SetConnectionString(connectionString);
 
             var tenantService = ServiceLocator.Current.GetInstance<ITenantMapService>();
-            Console.WriteLine("Getting tenants");
+            AnsiConsole.WriteLine("Getting tenants");
             var tenants = await tenantService.GetStudioMap();
-            foreach(var tenant in tenants.Keys)
+            foreach (var tenant in tenants.Keys)
             {
                 Console.WriteLine(tenant);
             }
 
-            Console.WriteLine("Getting services");
+            AnsiConsole.WriteLine("Getting services");
             foreach (var service in Util.GetAllServices())
             {
                 Console.WriteLine(service.ContextName);
