@@ -4,15 +4,20 @@ using Simplic.Base;
 using Simplic.Cache;
 using Simplic.Cache.Service;
 using Simplic.Configuration;
+using Simplic.Configuration.Data;
 using Simplic.Configuration.Data.DB;
 using Simplic.Configuration.Service;
 using Simplic.Framework.Base;
 using Simplic.Framework.DAL;
 using Simplic.MessageBroker;
 using Simplic.Ox.CLI.Dummy;
+using Simplic.Session;
+using Simplic.Session.Service;
 using Simplic.Sql;
 using Simplic.Sql.SqlAnywhere.Service;
 using Simplic.Studio.Ox;
+using Simplic.Studio.Ox.Data.DB;
+using Simplic.Studio.Ox.Service;
 using Spectre.Console;
 using System.IO;
 using System.Reflection;
@@ -59,11 +64,17 @@ namespace Simplic.Ox.CLI
 
         public static void RegisterTypes()
         {
-            IUnityContainer instance = ServiceLocator.Current.GetInstance<IUnityContainer>();
             container.RegisterType<ICacheService, CacheService>();
             container.RegisterType<IConnectionConfigurationService, ConnectionConfigurationService>();
             container.RegisterType<IConnectionConfigurationRepository, ConnectionConfigurationRepository>();
+            container.RegisterType<IConfigurationService, ConfigurationService>();
+            container.RegisterType<IConfigurationRepository, ConfigurationRepository>();
+            container.RegisterType<ISessionService, SessionService>();
             container.RegisterType<IMessageBus, MessageBus>();
+            container.RegisterType<TenantSystem.IOrganizationService, TenantSystem.Service.OrganizationService>();
+            container.RegisterType<TenantSystem.IOrganizationRepository, TenantSystem.Data.DB.OrganizationRepository>();
+            container.RegisterType<ISharedIdRepository, SharedIdRepository>();
+            container.RegisterType<ISharedIdService, SharedIdService>();
         }
 
         /// <summary>
@@ -114,81 +125,10 @@ namespace Simplic.Ox.CLI
             };
         }
 
-        public static void RegisterAllAssemblies()
-        {
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            foreach (var assembly in assemblies)
-            {
-                RegisterAllModules(assembly);
-            }
-        }
-
-        public static void RegisterAllModules(Assembly assembly)
-        {
-            Type?[] types;
-            try
-            {
-                types = assembly.GetTypes();
-            }
-            catch (ReflectionTypeLoadException ex)
-            {
-                types = ex.Types;
-            }
-            var moduleTypes = types.Where(t => t is not null && t.IsAssignableTo(typeof(IFrameworkEntryPoint)));
-            foreach (var moduleType in moduleTypes)
-            {
-                RegisterModule(moduleType!);
-            }
-        }
-
-        public static void RegisterModule(Type moduleType)
-        {
-            AnsiConsole.MarkupLineInterpolated($"Registering module: [aqua]{moduleType.FullName}[/]");
-            try
-            {
-                if (!moduleType.IsAssignableTo(typeof(IFrameworkEntryPoint)))
-                {
-                    AnsiConsole.MarkupLineInterpolated($"[red]Module is not an entry point[/]: [aqua]{moduleType.FullName}[/] (No constructor)");
-                    return;
-                }
-                var constructor = moduleType.GetConstructor(Type.EmptyTypes);
-                if (constructor is null)
-                {
-                    AnsiConsole.MarkupLineInterpolated($"[red]Module has no applicable constructor[/]: [aqua]{moduleType.FullName}[/]");
-                    return;
-                }
-                var module = (IFrameworkEntryPoint)constructor.Invoke(Array.Empty<object>());
-                module.Initilize();
-                AnsiConsole.MarkupLine("[green]Registered module[/]");
-            }
-            catch (Exception ex)
-            {
-                AnsiConsole.MarkupLine("[red]Module load failed[/]");
-                AnsiConsole.WriteException(ex);
-            }
-        }
-
-        public static void RegisterModule<TModule>() where TModule : IFrameworkEntryPoint, new()
-        {
-            AnsiConsole.MarkupLineInterpolated($"Registering module: [aqua]{typeof(TModule).FullName}[/]");
-
-            try
-            {
-                var module = new TModule();
-                module.Initilize();
-            }
-            catch (Exception ex)
-            {
-                AnsiConsole.MarkupLine("[red]Module load failed[/]");
-                AnsiConsole.WriteException(ex);
-            }
-
-            AnsiConsole.MarkupLine("[green]Registered module[/]");
-        }
-
         public static void InitializeOx()
         {
             AnsiConsole.WriteLine("Initializing Ox");
+            Plugins.RegisterAndInitializeModule<PlugIn.Studio.Ox.Server.FrameworkEntryPoint>();
             AnsiConsole.WriteLine("Initialized Ox");
         }
 

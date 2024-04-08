@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Simplic.Ox.CLI": {
+      "commandName": "Project",
+      "commandLineArgs": "--help"
+    }
+  }
+}

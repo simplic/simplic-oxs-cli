@@ -33,9 +33,18 @@ namespace Simplic.Ox.CLI
             organizationClient = new OrganizationClient(httpClient);
         }
 
-        public async Task<string> Authorize(Guid organizationId)
+        public async Task<string> Login()
+        {
+            if (string.IsNullOrWhiteSpace(cachedToken) || !CheckJWTExpirationValid(cachedToken))
+                cachedToken = await GetAuthorization();
+            return cachedToken;
+        }
+
+        public async Task<string> LoginOrganization(Guid organizationId)
         {
             LoginResponse? authResponse;
+
+            await Login();
 
             if (string.IsNullOrWhiteSpace(cachedToken) || !CheckJWTExpirationValid(cachedToken))
                 cachedToken = await GetAuthorization();
@@ -54,7 +63,7 @@ namespace Simplic.Ox.CLI
             return cachedToken;
         }
 
-        public Task CreateOrganization(string name, AddressModel address) =>
+        public Task<OrganizationModel> CreateOrganization(string name, AddressModel address) =>
             organizationClient.OrganizationPostAsync(new CreateOrganizationRequest
             {
                 Name = name,
@@ -62,6 +71,7 @@ namespace Simplic.Ox.CLI
                 Dummy = true,
             });
 
+        public Task<ICollection<OrganizationMemberModel>> ListOrganizations() => organizationClient.GetForUserAsync();
 
         public Task DeleteOrganization(Guid id) => organizationClient.OrganizationDeleteAsync(id);
 
@@ -84,7 +94,7 @@ namespace Simplic.Ox.CLI
             {
                 Console.WriteLine($"  Creating...");
 
-                var oxsId = await service.CreateUpload(id, await Authorize(tenantId));
+                var oxsId = await service.CreateUpload(id, await LoginOrganization(tenantId));
 
                 if (oxsId == default)
                 {
@@ -109,7 +119,7 @@ namespace Simplic.Ox.CLI
             Console.WriteLine($"  Updating...");
 
             // Call update method in the other case.
-            await service.UpdateUpload(sharedId.InstanceDataId, sharedId.OxSId, await Authorize(tenantId));
+            await service.UpdateUpload(sharedId.InstanceDataId, sharedId.OxSId, await LoginOrganization(tenantId));
             Console.WriteLine($"  > Done");
         }
 
