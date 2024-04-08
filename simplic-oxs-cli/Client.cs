@@ -1,9 +1,11 @@
-﻿using Simplic.Studio.Ox;
+﻿using CommonServiceLocator;
+using Simplic.Studio.Ox;
 using Simplic.Studio.Ox.Service;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http;
 using System.Net.Http.Headers;
 
-namespace simplic_oxs_cli
+namespace Simplic.Ox.CLI
 {
     public class Client
     {
@@ -12,6 +14,7 @@ namespace simplic_oxs_cli
 
         private readonly HttpClient httpClient;
         private readonly AuthClient authClient;
+        private readonly OrganizationClient organizationClient;
         private readonly JwtSecurityTokenHandler handler = new();
 
         private readonly string email;
@@ -24,7 +27,10 @@ namespace simplic_oxs_cli
             this.httpClient = httpClient;
             this.email = email;
             this.password = password;
+            sharedIdRepository = ServiceLocator.Current.GetInstance<ISharedIdRepository>();
+            instanceDataUploadServices = ServiceLocator.Current.GetInstance<IEnumerable<IInstanceDataUploadService>>();
             authClient = new AuthClient(httpClient);
+            organizationClient = new OrganizationClient(httpClient);
         }
 
         public async Task<string> Authorize(Guid organizationId)
@@ -48,10 +54,16 @@ namespace simplic_oxs_cli
             return cachedToken;
         }
 
-        public async Task CreateOrganization()
-        {
+        public Task CreateOrganization(string name, AddressModel address) =>
+            organizationClient.OrganizationPostAsync(new CreateOrganizationRequest
+            {
+                Name = name,
+                Address = address,
+                Dummy = true,
+            });
 
-        }
+
+        public Task DeleteOrganization(Guid id) => organizationClient.OrganizationDeleteAsync(id);
 
         public async Task UploadData(Guid id, string context, Guid tenantId)
         {

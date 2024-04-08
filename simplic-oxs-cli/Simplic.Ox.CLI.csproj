@@ -1,11 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-    <RootNamespace>simplic_oxs_cli</RootNamespace>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <RootNamespace>Simplic.Ox.CLI</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+	<UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,11 +14,17 @@
     <PackageReference Include="Dapper" Version="2.1.28" />
     <PackageReference Include="Sap.Data.SQLAnywhere.EF6" Version="17.0.10.63154" />
     <PackageReference Include="Simplic.Base" Version="8.1.323.125" />
+    <PackageReference Include="Simplic.Cache" Version="6.2.21.1225" />
+    <PackageReference Include="Simplic.Cache.Service" Version="6.1.21.1225" />
+    <PackageReference Include="Simplic.Configuration" Version="7.0.423.711" />
+    <PackageReference Include="Simplic.Configuration.Data.DB" Version="7.0.823.711" />
+    <PackageReference Include="Simplic.Configuration.Service" Version="7.0.423.711" />
     <PackageReference Include="Simplic.CoreLib" Version="7.3.122.1019" />
     <PackageReference Include="Simplic.Data.Sql" Version="1.15.121.1202" />
     <PackageReference Include="Simplic.Framework.Base" Version="8.2.823.131" />
     <PackageReference Include="Simplic.Framework.DAL" Version="8.1.523.131" />
     <PackageReference Include="Simplic.MessageBroker" Version="1.5.523.131" />
+    <PackageReference Include="Simplic.PlugIn.ArticleMaster" Version="3.3.823.1002" />
     <PackageReference Include="Simplic.PlugIn.Studio.Ox.Server" Version="1.0.1023.621" />
     <PackageReference Include="Simplic.Sql" Version="6.3.121.1212" />
     <PackageReference Include="Simplic.Sql.SqlAnywhere.Service" Version="6.0.323.125" />
@@ -32,6 +39,7 @@
     <PackageReference Include="System.Security.Permissions" Version="8.0.0" />
     <PackageReference Include="Unity" Version="5.11.10" />
     <PackageReference Include="Unity.ServiceLocation" Version="5.11.1" />
+    <PackageReference Include="YamlDotNet" Version="15.1.2" />
   </ItemGroup>
 
 </Project>
