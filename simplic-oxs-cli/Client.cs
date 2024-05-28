@@ -7,7 +7,7 @@ using System.Net.Http.Headers;
 
 namespace Simplic.Ox.CLI
 {
-    public class Client
+    public class Client : IDisposable
     {
         private readonly ISharedIdRepository sharedIdRepository;
         private readonly IEnumerable<IInstanceDataUploadService> instanceDataUploadServices;
@@ -20,36 +20,47 @@ namespace Simplic.Ox.CLI
         private readonly string email;
         private readonly string password;
 
-        private string? cachedToken;
+        private bool disposed = false;
 
-        public Client(HttpClient httpClient, string email, string password)
+        public Client(Uri uri, string email, string password)
         {
-            this.httpClient = httpClient;
             this.email = email;
             this.password = password;
+            httpClient = new()
+            {
+                BaseAddress = uri
+            };
             sharedIdRepository = ServiceLocator.Current.GetInstance<ISharedIdRepository>();
             instanceDataUploadServices = ServiceLocator.Current.GetInstance<IEnumerable<IInstanceDataUploadService>>();
-            authClient = new AuthClient(httpClient);
-            organizationClient = new OrganizationClient(httpClient);
+            authClient = new(httpClient);
+            organizationClient = new(httpClient);
         }
 
-        public async Task<string> Login()
+        public async Task Register()
         {
-            if (string.IsNullOrWhiteSpace(cachedToken) || !CheckJWTExpirationValid(cachedToken))
-                cachedToken = await GetAuthorization();
-            return cachedToken;
+            await authClient.RegisterAsync(new RegisterRequest
+            {
+                Email = email,
+                Password = password,
+            });
         }
 
-        public async Task<string> LoginOrganization(Guid organizationId)
+        public async Task Login()
+        {
+            if (string.IsNullOrWhiteSpace(Token) || !CheckJWTExpirationValid(Token))
+                Token = await GetAuthorization();
+        }
+
+        public async Task LoginOrganization(Guid organizationId)
         {
             LoginResponse? authResponse;
 
             await Login();
 
-            if (string.IsNullOrWhiteSpace(cachedToken) || !CheckJWTExpirationValid(cachedToken))
-                cachedToken = await GetAuthorization();
-            if (GetOrganizationIdFromJWT(cachedToken) == organizationId)
-                return cachedToken;
+            if (string.IsNullOrWhiteSpace(Token) || !CheckJWTExpirationValid(Token))
+                Token = await GetAuthorization();
+            if (GetOrganizationIdFromJWT(Token) == organizationId)
+                return;
 
             authResponse = await authClient.SelectOrganizationAsync(new SelectOrganizationRequest
             {
@@ -58,18 +69,28 @@ namespace Simplic.Ox.CLI
             if (string.IsNullOrWhiteSpace(authResponse.Token))
                 throw new Exception("Error during authentification");
 
-            cachedToken = authResponse.Token;
-
-            return cachedToken;
+            Token = authResponse.Token;
         }
 
-        public Task<OrganizationModel> CreateOrganization(string name, AddressModel address) =>
+        public Task<OrganizationModel> CreateDummyOrganization(string name, AddressModel address) =>
             organizationClient.OrganizationPostAsync(new CreateOrganizationRequest
             {
                 Name = name,
                 Address = address,
                 Dummy = true,
             });
+
+        public async Task<OrganizationMemberModel?> GetOrganizationById(Guid id)
+        {
+            var organizations = await ListOrganizations();
+            return organizations.FirstOrDefault(o => o.OrganizationId == id);
+        }
+
+        public async Task<OrganizationMemberModel?> GetOrganizationByName(string name)
+        {
+            var organizations = await ListOrganizations();
+            return organizations.FirstOrDefault(o => o.OrganizationName == name);
+        }
 
         public Task<ICollection<OrganizationMemberModel>> ListOrganizations() => organizationClient.GetForUserAsync();
 
@@ -94,7 +115,7 @@ namespace Simplic.Ox.CLI
             {
                 Console.WriteLine($"  Creating...");
 
-                var oxsId = await service.CreateUpload(id, await LoginOrganization(tenantId));
+                var oxsId = await service.CreateUpload(id, Token);
 
                 if (oxsId == default)
                 {
@@ -119,7 +140,7 @@ namespace Simplic.Ox.CLI
             Console.WriteLine($"  Updating...");
 
             // Call update method in the other case.
-            await service.UpdateUpload(sharedId.InstanceDataId, sharedId.OxSId, await LoginOrganization(tenantId));
+            await service.UpdateUpload(sharedId.InstanceDataId, sharedId.OxSId, Token);
             Console.WriteLine($"  > Done");
         }
 
@@ -185,5 +206,27 @@ namespace Simplic.Ox.CLI
                 return null;
             }
         }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing && !disposed)
+            {
+                httpClient.Dispose();
+            }
+            disposed = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~Client()
+        {
+            Dispose(false);
+        }
+
+        public string? Token { get; private set; }
     }
 }

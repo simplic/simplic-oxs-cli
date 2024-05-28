@@ -1,5 +1,4 @@
 ﻿using CommonServiceLocator;
-using Dapper;
 using Simplic.Base;
 using Simplic.Cache;
 using Simplic.Cache.Service;
@@ -7,7 +6,6 @@ using Simplic.Configuration;
 using Simplic.Configuration.Data;
 using Simplic.Configuration.Data.DB;
 using Simplic.Configuration.Service;
-using Simplic.Framework.Base;
 using Simplic.Framework.DAL;
 using Simplic.MessageBroker;
 using Simplic.Ox.CLI.Dummy;
@@ -21,7 +19,6 @@ using Simplic.Studio.Ox.Service;
 using Spectre.Console;
 using System.IO;
 using System.Reflection;
-using System.Windows;
 using Unity;
 using Unity.ServiceLocation;
 
@@ -32,29 +29,21 @@ namespace Simplic.Ox.CLI
         public static readonly UnityContainer container = new UnityContainer();
 
         /// <summary>
-        /// Setup the framework
+        /// Initialize the simplic framework
         /// </summary>
         public static void InitializeFramework()
         {
-            AnsiConsole.Status().Start("Initializing framework", ctx =>
-            {
-                Thread.Sleep(1000);
-                container.RegisterType<ISqlService, SqlService>();
-                container.RegisterType<ISqlColumnService, SqlColumnService>();
-
-                var locator = new UnityServiceLocator(container);
-                ServiceLocator.SetLocatorProvider(() => locator);
-
-                // Initialize framework
-                GlobalSettings.UseIni = false;
-                GlobalSettings.UserId = 0;
-                GlobalSettings.MainThread = Thread.CurrentThread;
-                GlobalSettings.UserName = "ProjectCLI";
-
-                AnsiConsole.WriteLine("Initialized framework");
-            });
+            AnsiConsole.WriteLine("Initializing framework");
+            GlobalSettings.UseIni = false;
+            GlobalSettings.UserId = 0;
+            GlobalSettings.MainThread = Thread.CurrentThread;
+            GlobalSettings.UserName = "ProjectCLI";
         }
 
+        /// <summary>
+        /// Set the active connection string
+        /// </summary>
+        /// <param name="connection"></param>
         public static void SetConnectionString(string connection)
         {
             GlobalSettings.SetPrivateConnectionString(connection);
@@ -62,8 +51,16 @@ namespace Simplic.Ox.CLI
             DALManager.Init(connection);
         }
 
-        public static void RegisterTypes()
+        /// <summary>
+        /// Initialize dependency injection and register some basic types
+        /// </summary>
+        public static void InitializeContainer()
         {
+            var locator = new UnityServiceLocator(container);
+            ServiceLocator.SetLocatorProvider(() => locator);
+
+            container.RegisterType<ISqlService, SqlService>();
+            container.RegisterType<ISqlColumnService, SqlColumnService>();
             container.RegisterType<ICacheService, CacheService>();
             container.RegisterType<IConnectionConfigurationService, ConnectionConfigurationService>();
             container.RegisterType<IConnectionConfigurationRepository, ConnectionConfigurationRepository>();
@@ -75,42 +72,6 @@ namespace Simplic.Ox.CLI
             container.RegisterType<TenantSystem.IOrganizationRepository, TenantSystem.Data.DB.OrganizationRepository>();
             container.RegisterType<ISharedIdRepository, SharedIdRepository>();
             container.RegisterType<ISharedIdService, SharedIdService>();
-        }
-
-        /// <summary>
-        /// Counts all DLLs from the standard paths: /Bin/ and /Bin/[culture].
-        /// </summary>
-        /// <param name="path">local output path</param>
-        public static uint CountDlls()
-        {
-            var sqlService = ServiceLocator.Current.GetInstance<ISqlService>();
-            var currentCulture = Thread.CurrentThread.CurrentCulture.Name;
-            return sqlService.OpenConnection(connection =>
-            {
-                return connection.QueryFirst<uint>(
-                    $"SELECT COUNT(1) " +
-                    $"FROM Repository_Head " +
-                    $"WHERE DirectoryPath = '/Bin/' " +
-                    $"OR DirectoryPath = '/Bin/{currentCulture}/'");
-            });
-        }
-
-        /// <summary>
-        /// Download all DLLs from the standard paths: /Bin/ and /Bin/[culture].
-        /// </summary>
-        /// <param name="path">local output path</param>
-        public static IEnumerable<RepositoryDll> DownloadDlls()
-        {
-            var sqlService = ServiceLocator.Current.GetInstance<ISqlService>();
-            var currentCulture = Thread.CurrentThread.CurrentCulture.Name;
-            return sqlService.OpenConnection(connection =>
-            {
-                return connection.Query<RepositoryDll>(
-                    $"SELECT Name, Content " +
-                    $"FROM Repository_Head " +
-                    $"WHERE DirectoryPath = '/Bin/' " +
-                    $"OR DirectoryPath = '/Bin/{currentCulture}/'", buffered: false);
-            });
         }
 
         public static void RegisterAssemblyLoader(string folder)

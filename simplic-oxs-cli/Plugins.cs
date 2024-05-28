@@ -1,4 +1,7 @@
-﻿using Simplic.Framework.Base;
+﻿using CommonServiceLocator;
+using Dapper;
+using Simplic.Framework.Base;
+using Simplic.Sql;
 using Spectre.Console;
 using System.IO;
 using System.Reflection;
@@ -8,6 +11,40 @@ namespace Simplic.Ox.CLI
     public class Plugins
     {
         private static readonly IList<IFrameworkEntryPoint> uninitialized = new List<IFrameworkEntryPoint>();
+
+        /// <summary>
+        /// Counts all DLLs from the standard paths: /Bin/ and /Bin/[culture].
+        /// </summary>
+        public static uint CountDlls()
+        {
+            var sqlService = ServiceLocator.Current.GetInstance<ISqlService>();
+            var currentCulture = Thread.CurrentThread.CurrentCulture.Name;
+            return sqlService.OpenConnection(connection =>
+            {
+                return connection.QueryFirst<uint>(
+                    $"SELECT COUNT(1) " +
+                    $"FROM Repository_Head " +
+                    $"WHERE DirectoryPath = '/Bin/' " +
+                    $"OR DirectoryPath = '/Bin/{currentCulture}/'");
+            });
+        }
+
+        /// <summary>
+        /// Download all DLLs from the standard paths: /Bin/ and /Bin/[culture].
+        /// </summary>
+        public static IEnumerable<RepositoryDll> DownloadDlls()
+        {
+            var sqlService = ServiceLocator.Current.GetInstance<ISqlService>();
+            var currentCulture = Thread.CurrentThread.CurrentCulture.Name;
+            return sqlService.OpenConnection(connection =>
+            {
+                return connection.Query<RepositoryDll>(
+                    $"SELECT Name, Content " +
+                    $"FROM Repository_Head " +
+                    $"WHERE DirectoryPath = '/Bin/' " +
+                    $"OR DirectoryPath = '/Bin/{currentCulture}/'", buffered: false);
+            });
+        }
 
         public static IList<string> GetAllDlls(string path)
         {
@@ -81,9 +118,7 @@ namespace Simplic.Ox.CLI
             }
             var moduleTypes = types.Where(t => t is not null && t.IsAssignableTo(typeof(IFrameworkEntryPoint)));
             foreach (var moduleType in moduleTypes)
-            {
                 RegisterModule(moduleType!);
-            }
         }
 
         public static void RegisterModule(Type moduleType)
