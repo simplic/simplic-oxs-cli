@@ -8,15 +8,16 @@ namespace Simplic.Ox.CLI
 {
     public static class Program
     {
-        private const string Description = "Easy setup of test environments for OxS. Use without arguments to enable interactive mode";
-
         private async static Task Main(string[] args)
         {
             AnsiConsole.WriteLine("Simplic Ox CLI");
 
-            var app = new CommandApp<RootCommand>().WithDescription(Description);
+            var app = new CommandApp();
             app.Configure(config =>
             {
+                config.AddCommand<InteractiveCommand>("interactive")
+                    .WithDescription(InteractiveCommand.Description)
+                    .WithExample(InteractiveCommand.Example);
                 config.AddCommand<RegisterCommand>("register")
                     .WithDescription(RegisterCommand.Description)
                     .WithExample(RegisterCommand.Example);
@@ -40,11 +41,6 @@ namespace Simplic.Ox.CLI
             {
                 Util.InitializeContainer();
                 Util.InitializeFramework();
-                Interactive.SelectConnectionString();
-                var dllPath = "./.simplic/bin";
-                Util.RegisterAssemblyLoader(Path.GetFullPath(dllPath));
-                Util.RegisterAssemblyLoader("C:\\Users\\m.bergmann\\source\\repos\\simplic-framework\\src\\Simplic.Main\\bin\\Debug");
-                Util.InitializeOx();
 
                 await app.RunAsync(args);
             }
@@ -55,7 +51,10 @@ namespace Simplic.Ox.CLI
             }
         }
 
-        internal class BaseSettings : CommandSettings
+        /// <summary>
+        /// Base settings for every command (authenticate Ox)
+        /// </summary>
+        internal class OxAuthSettings : CommandSettings
         {
             [CommandOption("-u|--uri <URI>")]
             [Description("URI of the Ox service")]
@@ -70,7 +69,10 @@ namespace Simplic.Ox.CLI
             public string? Password { get; init; }
         }
 
-        internal class OxSettings : BaseSettings
+        /// <summary>
+        /// Settings only used in commands that operate on an Ox organization
+        /// </summary>
+        internal class OxOrganizationSettings : OxAuthSettings
         {
             [CommandOption("-i|--id <GUID>")]
             [Description("Ox organization id (mutually exclusive with --name)")]
@@ -89,37 +91,75 @@ namespace Simplic.Ox.CLI
             }
         }
 
-        internal sealed class RootCommand : AsyncCommand<RootCommand.Settings>
+        /// <summary>
+        /// Settings for commands that communicate with simplic studio
+        /// </summary>
+        internal class StudioSettings : CommandSettings
         {
+            [CommandOption("-d|--db <CONNECTION>")]
+            [Description("Database connection string")]
+            public string? DbConn { get; init; }
+
+            public override ValidationResult Validate()
+            {
+                return base.Validate();
+            }
+        }
+
+        /// <summary>
+        /// Settings for commands that operate on an Ox organization and communicate with simplic studio
+        /// </summary>
+        internal class StudioOxOrganizationSettings : OxOrganizationSettings
+        {
+            [CommandOption("-d|--db <CONNECTION>")]
+            [Description("Database connection string")]
+            public string? DbConn { get; init; }
+
+            public override ValidationResult Validate()
+            {
+                return base.Validate();
+            }
+        }
+
+        /// <summary>
+        /// Command that opens up an interface to setup an organization and synchronize data
+        /// </summary>
+        internal sealed class InteractiveCommand : AsyncCommand<InteractiveCommand.Settings>
+        {
+            public const string Description = "Setup a development environment interactively";
+            public static string[] Example = [
+                "interactive",
+                "--uri", "dev-oxs.simplic.io"
+            ];
+
             public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
             {
                 await Interactive.Run(settings);
 
-                return -1;
+                return 0;
             }
 
-            public sealed class Settings : OxSettings
+            public sealed class Settings : StudioOxOrganizationSettings
             {
-                [CommandOption("--dl|--download <DIR>")]
-                [Description("Download DLLs from Database to this directory")]
-                public string? Download { get; init; }
-
                 [CommandOption("--dp|--dlls <DIR>")]
                 [Description("Add a path containing DLLs that can be loaded")]
-                public string[] DllPaths { get; init; } = Array.Empty<string>();
+                public string[] DllPaths { get; init; } = [];
 
                 [CommandOption("-p|--plugin <FILE>")]
                 [Description("Load a plugin")]
-                public string[] Plugins { get; init; } = Array.Empty<string>();
+                public string[] Plugins { get; init; } = [];
             }
         }
 
-        internal sealed class RegisterCommand : AsyncCommand<BaseSettings>
+        internal sealed class RegisterCommand : AsyncCommand<OxAuthSettings>
         {
             public const string Description = "Register an account";
-            public const string Example = "register --url dev-oxs.simplic.io";
+            public static string[] Example = [
+                "register",
+                "--uri", "dev-oxs.simplic.io",
+            ];
 
-            public override async Task<int> ExecuteAsync(CommandContext context, BaseSettings settings)
+            public override async Task<int> ExecuteAsync(CommandContext context, OxAuthSettings settings)
             {
                 var uri = settings.Uri ?? Interactive.EnterUri();
                 var email = settings.Email ?? Interactive.EnterEmail();
@@ -137,7 +177,10 @@ namespace Simplic.Ox.CLI
         internal sealed class CreateCommand : AsyncCommand<CreateCommand.Settings>
         {
             public const string Description = "Create a dummy organization";
-            public const string Example = "create dev-oxs.simplic.io \"Pipeline check\"";
+            public static string[] Example = [
+                "create",
+                "dev-oxs.simplic.io", "\"Pipeline check\"",
+            ];
 
             public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
             {
@@ -155,7 +198,7 @@ namespace Simplic.Ox.CLI
                 return 0;
             }
 
-            public sealed class Settings : BaseSettings
+            public sealed class Settings : OxAuthSettings
             {
                 [CommandArgument(0, "[name]")]
                 [Description("Name of the organization to create")]
@@ -163,12 +206,16 @@ namespace Simplic.Ox.CLI
             }
         }
 
-        internal sealed class DeleteCommand : AsyncCommand<OxSettings>
+        internal sealed class DeleteCommand : AsyncCommand<OxOrganizationSettings>
         {
             public const string Description = "Delete a dummy organization";
-            public const string Example = "delete dev-oxs.simplic.io -i <id>";
+            public static string[] Example = [
+                "delete",
+                "--uri", "dev-oxs.simplic.io",
+                "-i", "<id>",
+            ];
 
-            public override async Task<int> ExecuteAsync(CommandContext context, OxSettings settings)
+            public override async Task<int> ExecuteAsync(CommandContext context, OxOrganizationSettings settings)
             {
                 var uri = settings.Uri ?? Interactive.EnterUri();
                 var email = settings.Email ?? Interactive.EnterEmail();
@@ -195,12 +242,15 @@ namespace Simplic.Ox.CLI
             }
         }
 
-        internal sealed class ListCommand : AsyncCommand<BaseSettings>
+        internal sealed class ListCommand : AsyncCommand<OxAuthSettings>
         {
             public const string Description = "List organizations linked with user";
-            public const string Example = "list dev-oxs.simplic.io";
+            public static string[] Example = [
+                "list",
+                "--uri", "dev-oxs.simplic.io",
+            ];
 
-            public override async Task<int> ExecuteAsync(CommandContext context, BaseSettings settings)
+            public override async Task<int> ExecuteAsync(CommandContext context, OxAuthSettings settings)
             {
                 var uri = settings.Uri ?? Interactive.EnterUri();
                 var email = settings.Email ?? Interactive.EnterEmail();
@@ -218,22 +268,68 @@ namespace Simplic.Ox.CLI
             }
         }
 
+        internal sealed class InstallCommand : AsyncCommand<InstallCommand.Settings>
+        {
+            public const string Description = "Download plugins from database";
+            public static string[] Example = [
+                "install", "./simplic/bin/",
+                "--dlls", "C:/Program Files/Simplic Studio/",
+            ];
+
+            public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+            {
+                var downloadPath = settings.DownloadPath ?? "./simplic/bin/";
+
+                var numDlls = Plugins.CountDlls();
+
+                if (Directory.Exists(downloadPath))
+                    Directory.Delete(downloadPath, true);
+                Directory.CreateDirectory(downloadPath);
+
+                AnsiConsole.WriteLine($"Downloading {numDlls} Dlls to {downloadPath}");
+                await AnsiConsole.Progress().StartAsync(async progress =>
+                {
+                    var task = progress.AddTask("Downloading Dlls");
+
+                    var i = 0;
+                    foreach (var dll in Plugins.DownloadDlls())
+                    {
+                        await File.WriteAllBytesAsync(Path.Join(downloadPath, dll.Name + ".dll"), dll.Content);
+                        i++;
+                        task.Value = 100 * i / numDlls;
+                    }
+                });
+
+                return 0;
+            }
+
+            public sealed class Settings : StudioSettings
+            {
+                [CommandArgument(0, "[DIR]")]
+                [Description("Store DLLs to this directory")]
+                public string? DownloadPath { get; init; }
+            }
+        }
+
         internal sealed class SetupCommand : AsyncCommand<SetupCommand.Settings>
         {
             public const string Description = "Setup a testing environment with a single command";
-            public const string Example = "setup dev-oxs.simplic.io" +
-                "--email automated@example.com " +
-                "--password 1234 " +
-                "--download ./.simplic/bin " +
-                "--dlls ./simplic/bin " +
-                "--plusing Simplic.PlugIn.SAC";
+            public static string[] Example = [
+                "setup",
+                "--uri", "dev-oxs.simplic.io",
+                "--email", "automated@example.com",
+                "--password", "1234",
+                "--download", "./.simplic/bin",
+                "--dlls", "./simplic/bin",
+                "--plugin", "Simplic.PlugIn.SAC",
+            ];
 
             public override Task<int> ExecuteAsync(CommandContext context, Settings settings)
             {
                 throw new NotImplementedException();
             }
 
-            public sealed class Settings : OxSettings
+            public sealed class Settings : OxOrganizationSettings
             {
                 [CommandOption("--dl|--download")]
                 [Description("Download DLLs from Database to this directory")]
@@ -241,7 +337,7 @@ namespace Simplic.Ox.CLI
 
                 [CommandOption("--dp|--dlls")]
                 [Description("Add a path containing DLLs that can be loaded")]
-                public string[] DllPaths { get; init; } = Array.Empty<string>();
+                public string[] DllPaths { get; init; } = [];
 
                 [CommandOption("-p|--plugin")]
                 [Description("Load a plugin")]

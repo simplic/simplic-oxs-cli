@@ -37,7 +37,7 @@ namespace Simplic.Ox.CLI
             GlobalSettings.UseIni = false;
             GlobalSettings.UserId = 0;
             GlobalSettings.MainThread = Thread.CurrentThread;
-            GlobalSettings.UserName = "ProjectCLI";
+            GlobalSettings.UserName = "OxCLI";
         }
 
         /// <summary>

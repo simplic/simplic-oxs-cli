@@ -46,16 +46,14 @@ namespace Simplic.Ox.CLI
             });
         }
 
-        public static IList<string> GetAllDlls(string path)
+        public static IList<AssemblyName> Scan(IEnumerable<string> paths)
         {
-            return Directory.GetFiles(path, "Simplic.PlugIn.*.dll");
-        }
+            // Get all DLLs. Those might not be plugins, but 
+            var dlls = paths.SelectMany(p => Directory.EnumerateFiles(p, "*.dll"));
+            // Get all potential plugins
+            var dllsToScan = dlls.Where(p => p.StartsWith("Simplic.PlugIn.")).ToList();
 
-        public static IList<AssemblyName> Scan(IEnumerable<string> paths, IList<string> dllsToScan)
-        {
-            var files = paths.SelectMany(p => Directory.EnumerateFiles(p, "*.dll"));
-
-            var resolver = new PathAssemblyResolver(files);
+            var resolver = new PathAssemblyResolver(dlls);
             using var mlc = new MetadataLoadContext(resolver);
 
             var found = new List<AssemblyName>();
@@ -67,28 +65,26 @@ namespace Simplic.Ox.CLI
                 var i = 0;
                 foreach (var file in dllsToScan)
                 {
+                    Assembly assembly;
+                    Type[] types;
                     try
                     {
-                        var assembly = mlc.LoadFromAssemblyPath(file);
-                        var types = assembly.GetExportedTypes();
-
-                        var numTypes = types.Length;
-                        foreach (var type in types)
-                        {
-                            try
-                            {
-                                if (type.GetInterface("IFrameworkEntryPoint") is not null)
-                                {
-                                    found.Add(assembly.GetName());
-                                }
-                            }
-                            catch { }
-                        }
-
-                        i++;
-                        task.Value = 100 * i / numDlls;
+                        assembly = mlc.LoadFromAssemblyPath(file);
+                        types = assembly.GetExportedTypes();
                     }
-                    catch { }
+                    catch { continue; }
+                    foreach (var type in types)
+                    {
+                        try
+                        {
+                            if (type.GetInterface("IFrameworkEntryPoint") != null)
+                                found.Add(assembly.GetName());
+                        }
+                        catch { }
+                    }
+
+                    i++;
+                    task.Value = 100 * i / numDlls;
                 }
                 task.StopTask();
             });
@@ -100,9 +96,7 @@ namespace Simplic.Ox.CLI
         {
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
             foreach (var assembly in assemblies)
-            {
                 RegisterAllModules(assembly);
-            }
         }
 
         public static void RegisterAllModules(Assembly assembly)

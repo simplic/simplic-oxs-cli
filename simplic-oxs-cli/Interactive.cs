@@ -3,13 +3,12 @@ using Simplic.Studio.Ox;
 using Spectre.Console;
 using System.IO;
 using System.Reflection;
-using System.Runtime.InteropServices;
 
 namespace Simplic.Ox.CLI
 {
     internal static class Interactive
     {
-        private const string DefaultConnectionString = "dbn=Simplic;server=Local;charset=UTF-8;Links=TCPIP;UID=admin;PWD=school";
+        private const string DefaultConnectionString = "dbn=DocCenter;server=Local;charset=UTF-8;Links=TCPIP;UID=admin;PWD=school";
 
         private static async Task<Client> Login(Uri? uri, string? email, string? password)
         {
@@ -41,7 +40,7 @@ namespace Simplic.Ox.CLI
             if (id != null)
             {
                 var organization = await client.GetOrganizationById(id.Value);
-                if(organization != null)
+                if (organization != null)
                     return (organization.OrganizationId, organization.OrganizationName);
             }
             if (name != null)
@@ -99,7 +98,7 @@ namespace Simplic.Ox.CLI
             return await tenantMapService.GetByOxSTenant(oxsId);
         }
 
-        private static void LoadModules(string dllPath)
+        private static void DownloadAssemblies(string dllPath)
         {
             var numDlls = Plugins.CountDlls();
             if (AnsiConsole.Confirm($"Download {numDlls} Dlls to {dllPath}", !Directory.Exists(dllPath)))
@@ -120,16 +119,11 @@ namespace Simplic.Ox.CLI
                     }
                 });
             }
+        }
 
-            var paths = new List<string> {
-                dllPath,
-                "C:\\Users\\m.bergmann\\source\\repos\\simplic-framework\\src\\Simplic.Main\\bin\\Debug",
-                RuntimeEnvironment.GetRuntimeDirectory()
-            };
-            var plugins = Plugins.Scan(paths, Plugins.GetAllDlls(dllPath))
-                                 .Select(p => p.Name)
-                                 .Where(n => n is not null)
-                                 .Select(n => n!);
+        private static void LoadModules(IEnumerable<string> paths)
+        {
+            var plugins = Plugins.Scan(paths).Where(p => p.Name is not null).Select(p => p.Name!);
 
             var pluginsToLoad = AnsiConsole.Prompt(
                 new MultiSelectionPrompt<string>()
@@ -239,10 +233,8 @@ namespace Simplic.Ox.CLI
             }
         }
 
-        public async static Task Run(Program.RootCommand.Settings settings)
+        public async static Task Run(Program.InteractiveCommand.Settings settings)
         {
-            var dllPath = "./.simplic/bin";
-
             Util.InitializeOx();
 
             using var client = await Login(settings.Uri, settings.Email, settings.Password);
@@ -255,7 +247,13 @@ namespace Simplic.Ox.CLI
             if (client.Token == null)
                 return;
 
-            LoadModules(dllPath);
+            SelectConnectionString();
+            var dllPaths = settings.DllPaths.ToList();
+            foreach (var dllPath in settings.DllPaths)
+                Util.RegisterAssemblyLoader(Path.GetFullPath(dllPath));
+            LoadModules(settings.DllPaths);
+            Util.InitializeOx();
+
 
             await SyncData(oxsId.Value, client.Token);
         }
@@ -272,14 +270,14 @@ namespace Simplic.Ox.CLI
             if (selConn == "Default")
                 connectionString = DefaultConnectionString;
             else
-                connectionString = AnsiConsole.Prompt(new TextPrompt<string>("Input connection string"));
+                connectionString = AnsiConsole.Ask<string>("Input connection string");
 
             Util.SetConnectionString(connectionString);
         }
 
-        public static Uri EnterUri() => new(AnsiConsole.Prompt(new TextPrompt<string>("[bold magenta]Enter uri[/]      [gray]>[/]")));
-        public static string EnterEmail() => AnsiConsole.Prompt(new TextPrompt<string>("[bold magenta]Enter email[/]    [gray]>[/]"));
+        public static Uri EnterUri() => new(AnsiConsole.Ask<string>("[bold magenta]Enter uri[/]      [gray]>[/]"));
+        public static string EnterEmail() => AnsiConsole.Ask<string>("[bold magenta]Enter email[/]    [gray]>[/]");
         public static string EnterPassword() => AnsiConsole.Prompt(new TextPrompt<string>("[bold magenta]Enter password[/] [gray]>[/]").Secret('ö'));
-        public static string EnterName() => AnsiConsole.Prompt(new TextPrompt<string>("[bold magenta]Enter name[/]     [gray]>[/]"));
+        public static string EnterName() => AnsiConsole.Ask<string>("[bold magenta]Enter name[/]     [gray]>[/]");
     }
 }

@@ -2,7 +2,7 @@
   "profiles": {
     "Simplic.Ox.CLI": {
       "commandName": "Project",
-      "commandLineArgs": "-u https://dev-oxs.simplic.io/ -e mattis.bergmann@simplic.biz"
+      "commandLineArgs": "interactive -u https://dev-oxs.simplic.io/ -e mattis.bergmann@simplic.biz"
     }
   }
 }
