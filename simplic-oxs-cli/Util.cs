@@ -6,6 +6,7 @@ using Simplic.Configuration;
 using Simplic.Configuration.Data;
 using Simplic.Configuration.Data.DB;
 using Simplic.Configuration.Service;
+using Simplic.Framework.Core;
 using Simplic.Framework.DAL;
 using Simplic.MessageBroker;
 using Simplic.Ox.CLI.Dummy;
@@ -19,6 +20,7 @@ using Simplic.Studio.Ox.Service;
 using Spectre.Console;
 using System.IO;
 using System.Reflection;
+using System.Windows.Controls;
 using Unity;
 using Unity.ServiceLocation;
 
@@ -74,18 +76,6 @@ namespace Simplic.Ox.CLI
             container.RegisterType<ISharedIdService, SharedIdService>();
         }
 
-        public static void RegisterAssemblyLoader(string folder)
-        {
-            AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
-            {
-                string assemblyPath = Path.Combine(folder, new AssemblyName(args.Name).Name + ".dll");
-                if (!File.Exists(assemblyPath))
-                    return null;
-                Assembly assembly = Assembly.LoadFrom(assemblyPath);
-                return assembly;
-            };
-        }
-
         public static void InitializeOx()
         {
             AnsiConsole.WriteLine("Initializing Ox");
@@ -93,9 +83,68 @@ namespace Simplic.Ox.CLI
             AnsiConsole.WriteLine("Initialized Ox");
         }
 
-        public static IEnumerable<IInstanceDataUploadService> GetAllServices()
+        public static IEnumerable<IInstanceDataUploadService> GetUploadServices() => container.ResolveAll<IInstanceDataUploadService>();
+
+        public static async Task SynchronizeContexts(IEnumerable<string> contexts, Guid tenantId, string authToken)
         {
-            return container.ResolveAll<IInstanceDataUploadService>();
+            var sharedIdRepository = ServiceLocator.Current.GetInstance<ISharedIdRepository>();
+            var services = GetUploadServices();
+            foreach (var context in contexts)
+            {
+                var service = services.First(s => s.ContextName == context);
+                var instanceIds = (await service.GetAllInstanceDataIds(tenantId)).ToList();
+                var count = instanceIds.Count;
+                AnsiConsole.MarkupLineInterpolated($"Synchronizing {context} ([cyan]{count}[/] items)");
+
+                await AnsiConsole.Progress().StartAsync(async progress =>
+                {
+                    var task = progress.AddTask("Synchronizing");
+
+                    var i = 0;
+                    foreach (var instanceId in instanceIds)
+                    {
+                        try
+                        {
+                            await UploadData(service, sharedIdRepository, authToken, instanceId, tenantId);
+                        }
+                        catch (Exception ex)
+                        {
+                            AnsiConsole.WriteException(ex);
+                        }
+                        i++;
+                        task.Value = 100 * i / count;
+                    }
+                    task.StopTask();
+                });
+            }
+        }
+
+        private async static Task UploadData(IInstanceDataUploadService service, ISharedIdRepository sharedIdRepository, string authToken, Guid instanceId, Guid tenantId)
+        {
+            var sharedId = await sharedIdRepository.GetSharedIdByStudioId(instanceId, service.ContextName, tenantId);
+
+            // Call create method when either no entry for a shared id is found or the oxs id in empty.
+            if (sharedId == null || sharedId.OxSId == Guid.Empty)
+            {
+                var oxsId = await service.CreateUpload(instanceId, authToken);
+                if (oxsId == default)
+                {
+                    AnsiConsole.MarkupLineInterpolated($"[red]Data not uploaded:[/] context={service.ContextName}  id=[gray]{instanceId}[/]  tenant=[gray]{tenantId}[/]");
+                    return;
+                }
+
+                sharedId = new SharedId
+                {
+                    InstanceDataId = instanceId,
+                    OxSId = oxsId,
+                    Context = service.ContextName,
+                    TenantId = tenantId
+                };
+
+                await sharedIdRepository.Save(sharedId);
+                return;
+            }
+            await service.UpdateUpload(sharedId.InstanceDataId, sharedId.OxSId, authToken);
         }
     }
 }

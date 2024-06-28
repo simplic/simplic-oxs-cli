@@ -1,4 +1,6 @@
-﻿using Spectre.Console;
+﻿using CommonServiceLocator;
+using Simplic.Studio.Ox;
+using Spectre.Console;
 using Spectre.Console.Cli;
 using System.ComponentModel;
 using System.Globalization;
@@ -30,6 +32,9 @@ namespace Simplic.Ox.CLI
                 config.AddCommand<ListCommand>("list")
                     .WithDescription(ListCommand.Description)
                     .WithExample(ListCommand.Example);
+                config.AddCommand<InstallCommand>("install")
+                    .WithDescription(InstallCommand.Description)
+                    .WithExample(InstallCommand.Example);
                 config.AddCommand<SetupCommand>("setup")
                     .WithDescription(SetupCommand.Description)
                     .WithExample(SetupCommand.Example);
@@ -40,8 +45,6 @@ namespace Simplic.Ox.CLI
             try
             {
                 Util.InitializeContainer();
-                Util.InitializeFramework();
-
                 await app.RunAsync(args);
             }
             catch (Exception ex)
@@ -64,7 +67,7 @@ namespace Simplic.Ox.CLI
             [Description("Ox email")]
             public string? Email { get; init; }
 
-            [CommandOption("--pw|--password <PASSWORD>")]
+            [CommandOption("-p|--password <PASSWORD>")]
             [Description("Ox password")]
             public string? Password { get; init; }
         }
@@ -82,49 +85,51 @@ namespace Simplic.Ox.CLI
             [Description("Ox organization name (leave empty for interactive)")]
             public string? Name { get; init; }
 
+            public async Task<Guid> GetId(Client client)
+            {
+                if (Id != null)
+                    return Id.Value;
+
+                var name = Name ?? Interactive.EnterName();
+                var organization = await client.GetOrganizationByName(name);
+                return organization?.OrganizationId ?? throw new Exception("Organization does not exist");
+            }
+
             public override ValidationResult Validate()
             {
                 if (Id is not null && Name is not null)
-                    return ValidationResult.Error("Only organization name or id can be set");
+                    return ValidationResult.Error("Only organization name OR id can be set");
 
                 return base.Validate();
             }
         }
 
         /// <summary>
-        /// Settings for commands that communicate with simplic studio
+        /// Settings for commands that sync data between Studio and Ox
         /// </summary>
-        internal class StudioSettings : CommandSettings
+        internal class SyncSettings : OxOrganizationSettings
         {
-            [CommandOption("-d|--db <CONNECTION>")]
+            [CommandOption("-c|--conn <CONNECTION>")]
             [Description("Database connection string")]
             public string? DbConn { get; init; }
 
-            public override ValidationResult Validate()
-            {
-                return base.Validate();
-            }
-        }
+            [CommandOption("-D|--dlls <DIR>")]
+            [Description("Add a path containing DLLs that can be loaded")]
+            public string[] DllPaths { get; init; } = [];
 
-        /// <summary>
-        /// Settings for commands that operate on an Ox organization and communicate with simplic studio
-        /// </summary>
-        internal class StudioOxOrganizationSettings : OxOrganizationSettings
-        {
-            [CommandOption("-d|--db <CONNECTION>")]
-            [Description("Database connection string")]
-            public string? DbConn { get; init; }
+            [CommandOption("-P|--plugin <NAME>")]
+            [Description("Load a plugin")]
+            public string[]? Plugins { get; init; }
 
-            public override ValidationResult Validate()
-            {
-                return base.Validate();
-            }
+            [CommandOption("-s|--sync <CONTEXT>")]
+            [Description("Synchronize a context")]
+            public string[]? Contexts { get; init; }
         }
 
         /// <summary>
         /// Command that opens up an interface to setup an organization and synchronize data
         /// </summary>
-        internal sealed class InteractiveCommand : AsyncCommand<InteractiveCommand.Settings>
+        internal sealed class InteractiveCommand : AsyncCommand<SyncSettings>
         {
             public const string Description = "Setup a development environment interactively";
             public static string[] Example = [
@@ -132,22 +137,36 @@ namespace Simplic.Ox.CLI
                 "--uri", "dev-oxs.simplic.io"
             ];
 
-            public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+            public override async Task<int> ExecuteAsync(CommandContext context, SyncSettings settings)
             {
-                await Interactive.Run(settings);
+                var uri = settings.Uri ?? Interactive.EnterUri();
+                var email = settings.Email ?? Interactive.EnterEmail();
+                var password = settings.Password ?? Interactive.EnterPassword();
+
+                Util.InitializeOx();
+                using var client = new Client(uri, email, password);
+                await client.Login();
+                Util.InitializeFramework();
+
+                var dbConn = settings.DbConn ?? Interactive.SelectConnectionString();
+                Util.SetConnectionString(dbConn);
+                Plugins.RegisterAssemblyPaths(settings.DllPaths);
+                var oxsId = await Interactive.OrganizationActions(client, settings.Id, settings.Name);
+
+                // The user cancelled login
+                if (!oxsId.HasValue)
+                    return -1;
+
+                if (client.Token == null)
+                    return -2;
+
+                var plugins = settings.Plugins ?? (IEnumerable<string>)Interactive.SelectPlugins(settings.DllPaths);
+                Plugins.Register(plugins);
+                Plugins.InitializeAll();
+
+                await Interactive.SyncData(oxsId.Value, client.Token);
 
                 return 0;
-            }
-
-            public sealed class Settings : StudioOxOrganizationSettings
-            {
-                [CommandOption("--dp|--dlls <DIR>")]
-                [Description("Add a path containing DLLs that can be loaded")]
-                public string[] DllPaths { get; init; } = [];
-
-                [CommandOption("-p|--plugin <FILE>")]
-                [Description("Load a plugin")]
-                public string[] Plugins { get; init; } = [];
             }
         }
 
@@ -165,6 +184,7 @@ namespace Simplic.Ox.CLI
                 var email = settings.Email ?? Interactive.EnterEmail();
                 var password = settings.Password ?? Interactive.EnterPassword();
 
+                Util.InitializeOx();
                 using var client = new Client(uri, email, password);
                 await client.Register();
                 AnsiConsole.MarkupLineInterpolated($"[green]Registration successfull[/]");
@@ -178,8 +198,8 @@ namespace Simplic.Ox.CLI
         {
             public const string Description = "Create a dummy organization";
             public static string[] Example = [
-                "create",
-                "dev-oxs.simplic.io", "\"Pipeline check\"",
+                "create", "\"Pipeline check\"",
+                "--uri", "dev-oxs.simplic.io",
             ];
 
             public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
@@ -189,9 +209,14 @@ namespace Simplic.Ox.CLI
                 var password = settings.Password ?? Interactive.EnterPassword();
                 var name = settings.Name ?? Interactive.EnterName();
 
+                Util.InitializeOx();
                 using var client = new Client(uri, email, password);
                 await client.Login();
 
+                var dbConn = settings.DbConn ?? Interactive.SelectConnectionString();
+                Util.InitializeFramework();
+                Util.SetConnectionString(dbConn);
+                Plugins.RegisterAssemblyPaths(settings.DllPaths);
                 var organization = await OxManager.CreateDummyOrganization(client, name);
                 AnsiConsole.MarkupLineInterpolated($"Created organization [gray]{organization.Id}[/] - [yellow]{organization.Name}[/]");
 
@@ -203,10 +228,18 @@ namespace Simplic.Ox.CLI
                 [CommandArgument(0, "[name]")]
                 [Description("Name of the organization to create")]
                 public string? Name { get; set; }
+
+                [CommandOption("-c|--conn <CONNECTION>")]
+                [Description("Database connection string")]
+                public string? DbConn { get; init; }
+
+                [CommandOption("-D|--dlls <DIR>")]
+                [Description("Add a path containing DLLs that can be loaded")]
+                public string[] DllPaths { get; init; } = [];
             }
         }
 
-        internal sealed class DeleteCommand : AsyncCommand<OxOrganizationSettings>
+        internal sealed class DeleteCommand : AsyncCommand<DeleteCommand.Settings>
         {
             public const string Description = "Delete a dummy organization";
             public static string[] Example = [
@@ -215,30 +248,37 @@ namespace Simplic.Ox.CLI
                 "-i", "<id>",
             ];
 
-            public override async Task<int> ExecuteAsync(CommandContext context, OxOrganizationSettings settings)
+            public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
             {
                 var uri = settings.Uri ?? Interactive.EnterUri();
                 var email = settings.Email ?? Interactive.EnterEmail();
                 var password = settings.Password ?? Interactive.EnterPassword();
-                var id = settings.Id;
 
+                Util.InitializeOx();
                 using var client = new Client(uri, email, password);
                 await client.Login();
 
-                if (id is null)
-                {
-                    var name = settings.Name ?? Interactive.EnterName();
-                    var organization = await client.GetOrganizationByName(name);
-                    if (organization == null)
-                        return -1;
+                var id = await settings.GetId(client);
 
-                    id = organization.Id;
-                }
-
-                await OxManager.DeleteDummyOrganization(client, id.Value);
+                var dbConn = settings.DbConn ?? Interactive.SelectConnectionString();
+                Util.InitializeFramework();
+                Util.SetConnectionString(dbConn);
+                Plugins.RegisterAssemblyPaths(settings.DllPaths);
+                await OxManager.DeleteDummyOrganization(client, id);
                 AnsiConsole.MarkupLineInterpolated($"Deleted organization [gray]{id}[/]");
 
                 return 0;
+            }
+
+            public class Settings : OxOrganizationSettings
+            {
+                [CommandOption("-c|--conn <CONNECTION>")]
+                [Description("Database connection string")]
+                public string? DbConn { get; init; }
+
+                [CommandOption("-D|--dlls <DIR>")]
+                [Description("Add a path containing DLLs that can be loaded")]
+                public string[] DllPaths { get; init; } = [];
             }
         }
 
@@ -256,13 +296,12 @@ namespace Simplic.Ox.CLI
                 var email = settings.Email ?? Interactive.EnterEmail();
                 var password = settings.Password ?? Interactive.EnterPassword();
 
+                Util.InitializeOx();
                 using var client = new Client(uri, email, password);
                 await client.Login();
 
                 foreach (var organization in await client.ListOrganizations())
-                {
                     AnsiConsole.MarkupLineInterpolated($"[gray]{organization.OrganizationId}[/] - [blue]{organization.OrganizationName}[/]");
-                }
 
                 return 0;
             }
@@ -271,15 +310,15 @@ namespace Simplic.Ox.CLI
         internal sealed class InstallCommand : AsyncCommand<InstallCommand.Settings>
         {
             public const string Description = "Download plugins from database";
-            public static string[] Example = [
-                "install", "./simplic/bin/",
-                "--dlls", "C:/Program Files/Simplic Studio/",
-            ];
+            public static string[] Example = ["install", "./simplic/bin/"];
 
             public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
             {
                 var downloadPath = settings.DownloadPath ?? "./simplic/bin/";
 
+                var dbConn = settings.DbConn ?? Interactive.SelectConnectionString();
+                Util.InitializeFramework();
+                Util.SetConnectionString(dbConn);
                 var numDlls = Plugins.CountDlls();
 
                 if (Directory.Exists(downloadPath))
@@ -303,15 +342,19 @@ namespace Simplic.Ox.CLI
                 return 0;
             }
 
-            public sealed class Settings : StudioSettings
+            public sealed class Settings : CommandSettings
             {
                 [CommandArgument(0, "[DIR]")]
                 [Description("Store DLLs to this directory")]
                 public string? DownloadPath { get; init; }
+
+                [CommandOption("-c|--conn <CONNECTION>")]
+                [Description("Database connection string")]
+                public string? DbConn { get; init; }
             }
         }
 
-        internal sealed class SetupCommand : AsyncCommand<SetupCommand.Settings>
+        internal sealed class SetupCommand : AsyncCommand<SyncSettings>
         {
             public const string Description = "Setup a testing environment with a single command";
             public static string[] Example = [
@@ -319,29 +362,36 @@ namespace Simplic.Ox.CLI
                 "--uri", "dev-oxs.simplic.io",
                 "--email", "automated@example.com",
                 "--password", "1234",
-                "--download", "./.simplic/bin",
                 "--dlls", "./simplic/bin",
-                "--plugin", "Simplic.PlugIn.SAC",
+                "--plugin", "Simplic.PlugIn.ArticleMaster",
             ];
 
-            public override Task<int> ExecuteAsync(CommandContext context, Settings settings)
+            public async override Task<int> ExecuteAsync(CommandContext context, SyncSettings settings)
             {
-                throw new NotImplementedException();
-            }
+                var uri = settings.Uri ?? Interactive.EnterUri();
+                var email = settings.Email ?? Interactive.EnterEmail();
+                var password = settings.Password ?? Interactive.EnterPassword();
 
-            public sealed class Settings : OxOrganizationSettings
-            {
-                [CommandOption("--dl|--download")]
-                [Description("Download DLLs from Database to this directory")]
-                public string? Download { get; init; }
+                Util.InitializeOx();
+                using var client = new Client(uri, email, password);
+                await client.Login();
 
-                [CommandOption("--dp|--dlls")]
-                [Description("Add a path containing DLLs that can be loaded")]
-                public string[] DllPaths { get; init; } = [];
+                var oxsId = await settings.GetId(client);
 
-                [CommandOption("-p|--plugin")]
-                [Description("Load a plugin")]
-                public string[] Plugins { get; init; } = Array.Empty<string>();
+                var dbConn = settings.DbConn ?? Interactive.SelectConnectionString();
+                Util.InitializeFramework();
+                Util.SetConnectionString(dbConn);
+                Plugins.RegisterAssemblyPaths(settings.DllPaths);
+                var plugins = settings.Plugins ?? (IEnumerable<string>)Interactive.SelectPlugins(settings.DllPaths);
+                Plugins.Register(plugins);
+                Plugins.InitializeAll();
+
+                if (settings.Contexts != null)
+                    await Util.SynchronizeContexts(settings.Contexts, oxsId, client.Token);
+                else
+                    await Interactive.SyncData(oxsId, client.Token);
+
+                return 0;
             }
         }
     }

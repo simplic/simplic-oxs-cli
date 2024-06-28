@@ -1,26 +1,12 @@
 ﻿using CommonServiceLocator;
 using Simplic.Studio.Ox;
 using Spectre.Console;
-using System.IO;
-using System.Reflection;
 
 namespace Simplic.Ox.CLI
 {
     internal static class Interactive
     {
-        private const string DefaultConnectionString = "dbn=DocCenter;server=Local;charset=UTF-8;Links=TCPIP;UID=admin;PWD=school";
-
-        private static async Task<Client> Login(Uri? uri, string? email, string? password)
-        {
-            AnsiConsole.MarkupLine("[magenta]OxS login[/]");
-            uri ??= EnterUri();
-            email ??= EnterEmail();
-            password ??= EnterPassword();
-
-            var client = new Client(uri, email, password);
-            await client.Login();
-            return client;
-        }
+        private const string LocalConnectionString = "UID=admin;PWD=school;Server=Local;dbn=DocCenter;charset=UTF-8;Links=TCPIP";
 
         private async static Task<OrganizationMemberModel> SelectOrganization(Client client)
         {
@@ -82,7 +68,7 @@ namespace Simplic.Ox.CLI
             }
         }
 
-        private async static Task<Guid?> OrganizationActions(Client client, Guid? id, string? name)
+        public async static Task<Guid?> OrganizationActions(Client client, Guid? id, string? name)
         {
             var tenantMapService = ServiceLocator.Current.GetInstance<ITenantMapService>();
 
@@ -98,132 +84,43 @@ namespace Simplic.Ox.CLI
             return await tenantMapService.GetByOxSTenant(oxsId);
         }
 
-        private static void DownloadAssemblies(string dllPath)
-        {
-            var numDlls = Plugins.CountDlls();
-            if (AnsiConsole.Confirm($"Download {numDlls} Dlls to {dllPath}", !Directory.Exists(dllPath)))
-            {
-                if (Directory.Exists(dllPath))
-                    Directory.Delete(dllPath, true);
-                Directory.CreateDirectory(dllPath);
-                AnsiConsole.Progress().Start(progress =>
-                {
-                    var task = progress.AddTask("Downloading Dlls");
-
-                    var i = 0;
-                    foreach (var dll in Plugins.DownloadDlls())
-                    {
-                        File.WriteAllBytes(Path.Join(dllPath, dll.Name + ".dll"), dll.Content);
-                        i++;
-                        task.Value = 100 * i / numDlls;
-                    }
-                });
-            }
-        }
-
-        private static void LoadModules(IEnumerable<string> paths)
+        public static List<string> SelectPlugins(IEnumerable<string> paths)
         {
             var plugins = Plugins.Scan(paths).Where(p => p.Name is not null).Select(p => p.Name!);
 
-            var pluginsToLoad = AnsiConsole.Prompt(
+            return AnsiConsole.Prompt(
                 new MultiSelectionPrompt<string>()
                 .Title("Select Plugins to load")
                 .AddChoices(plugins)
                 .Required(false));
-
-            AnsiConsole.MarkupLine("[bold]Selected plugins:[/]");
-            foreach (var plugin in pluginsToLoad)
-                AnsiConsole.MarkupLineInterpolated($"[yellow]{plugin}[/]");
-
-            foreach (var plugin in pluginsToLoad)
-            {
-                var assembly = Assembly.Load(plugin);
-                Plugins.RegisterAllModules(assembly);
-            }
-
-            Plugins.InitializeAllModules();
         }
 
-        private async static Task UploadData(IInstanceDataUploadService service, ISharedIdRepository sharedIdRepository, string authToken, Guid instanceId, Guid tenantId)
-        {
-            var sharedId = await sharedIdRepository.GetSharedIdByStudioId(instanceId, service.ContextName, tenantId);
-
-            // Call create method when either no entry for a shared id is found or the oxs id in empty.
-            if (sharedId == null || sharedId.OxSId == Guid.Empty)
-            {
-                var oxsId = await service.CreateUpload(instanceId, authToken);
-                if (oxsId == default)
-                {
-                    AnsiConsole.MarkupLineInterpolated($"[red]Data not uploaded:[/] context={service.ContextName}  id=[gray]{instanceId}[/]  tenant=[gray]{tenantId}[/]");
-                    return;
-                }
-
-                sharedId = new SharedId
-                {
-                    InstanceDataId = instanceId,
-                    OxSId = oxsId,
-                    Context = service.ContextName,
-                    TenantId = tenantId
-                };
-
-                await sharedIdRepository.Save(sharedId);
-                return;
-            }
-            await service.UpdateUpload(sharedId.InstanceDataId, sharedId.OxSId, authToken);
-        }
-
-        private async static Task SyncData(Guid tenantId, string authToken)
+        public async static Task SyncData(Guid tenantId, string authToken)
         {
             var sharedIdRepository = ServiceLocator.Current.GetInstance<ISharedIdRepository>();
 
             AnsiConsole.WriteLine("Getting services");
-            var services = Util.GetAllServices().ToList();
-            var serviceNames = services.Select(s => s.ContextName).ToList();
+            var services = Util.GetUploadServices().ToList();
+            var contexts = services.Select(s => s.ContextName).ToList();
 
-            var servicesToSync = new List<string>();
+            var contextsToSync = new List<string>();
             uint order = 1;
-            while (serviceNames.Count > 0)
+            while (contexts.Count > 0)
             {
-                var serviceToSync = AnsiConsole.Prompt(
+                var context = AnsiConsole.Prompt(
                     new SelectionPrompt<string>()
                     .Title("Select context to synchronise")
-                    .AddChoices("-- Done --")
-                    .AddChoices(serviceNames));
+                    .AddChoices("-- Start Sync --")
+                    .AddChoices(contexts));
 
-                if (serviceToSync == "-- Done --")
+                if (context == "-- Start Sync --")
                     break;
 
                 try
                 {
-                    var service = services.First(s => s.ContextName == serviceToSync);
-                    AnsiConsole.MarkupLineInterpolated($"[bold]Selected context:[/] [gray]{order} ->[/] [yellow]{serviceToSync}[/]");
-                    var instanceIds = (await service.GetAllInstanceDataIds(tenantId)).ToList();
-                    var count = instanceIds.Count;
-                    AnsiConsole.MarkupLineInterpolated($"Synchronizing [cyan]{count}[/] items");
-
-                    await AnsiConsole.Progress().StartAsync(async progress =>
-                    {
-                        var task = progress.AddTask("Synchronizing");
-
-                        var i = 0;
-                        foreach (var instanceId in instanceIds)
-                        {
-                            try
-                            {
-                                await UploadData(service, sharedIdRepository, authToken, instanceId, tenantId);
-                            }
-                            catch (Exception ex)
-                            {
-                                AnsiConsole.WriteException(ex);
-                            }
-                            i++;
-                            task.Value = 100 * i / count;
-                        }
-                        task.StopTask();
-                    });
-
-                    serviceNames.Remove(serviceToSync);
-                    servicesToSync.Add(serviceToSync);
+                    AnsiConsole.MarkupLineInterpolated($"[bold]Selected context:[/] [gray]{order} ->[/] [yellow]{context}[/]");
+                    contexts.Remove(context);
+                    contextsToSync.Add(context);
                     order += 1;
                 }
                 catch (Exception ex)
@@ -231,48 +128,27 @@ namespace Simplic.Ox.CLI
                     AnsiConsole.WriteException(ex);
                 }
             }
+
+            bool rerun = false;
+            do
+            {
+                await Util.SynchronizeContexts(contextsToSync, tenantId, authToken);
+                rerun = AnsiConsole.Confirm("Rerun sync", rerun);
+            } while (rerun);
         }
 
-        public async static Task Run(Program.InteractiveCommand.Settings settings)
-        {
-            Util.InitializeOx();
-
-            using var client = await Login(settings.Uri, settings.Email, settings.Password);
-            var oxsId = await OrganizationActions(client, settings.Id, settings.Name);
-
-            // The user cancelled login
-            if (!oxsId.HasValue)
-                return;
-
-            if (client.Token == null)
-                return;
-
-            SelectConnectionString();
-            var dllPaths = settings.DllPaths.ToList();
-            foreach (var dllPath in settings.DllPaths)
-                Util.RegisterAssemblyLoader(Path.GetFullPath(dllPath));
-            LoadModules(settings.DllPaths);
-            Util.InitializeOx();
-
-
-            await SyncData(oxsId.Value, client.Token);
-        }
-
-        public static void SelectConnectionString()
+        public static string SelectConnectionString()
         {
             var selConn = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("Select Connection String")
-                    .AddChoices("Default", "Custom")
+                    .AddChoices("Local", "Custom")
             );
 
-            string connectionString;
-            if (selConn == "Default")
-                connectionString = DefaultConnectionString;
+            if (selConn == "Local")
+                return LocalConnectionString;
             else
-                connectionString = AnsiConsole.Ask<string>("Input connection string");
-
-            Util.SetConnectionString(connectionString);
+                return AnsiConsole.Ask<string>("Input connection string");
         }
 
         public static Uri EnterUri() => new(AnsiConsole.Ask<string>("[bold magenta]Enter uri[/]      [gray]>[/]"));

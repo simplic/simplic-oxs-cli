@@ -26,6 +26,7 @@ namespace Simplic.Ox.CLI
             var studioId = Guid.NewGuid();
             AnsiConsole.MarkupLineInterpolated($"Organization Id={organization.Id} Name={organization.Name}");
 
+            // Using SQL here since many classes from the framework do not work properly in this environment
             sqlService.OpenConnection(conn =>
             {
                 try
@@ -50,12 +51,17 @@ namespace Simplic.Ox.CLI
                     AnsiConsole.MarkupLineInterpolated($"[red]Failed to create studio organization[/] [gray]{studioId}[/]");
                     AnsiConsole.WriteException(ex);
                 }
-            });
-
-            await tenantMapService.Save(new TenantMap
-            {
-                OxSTenantId = oxsId,
-                StudioTenantId = studioId,
+                try
+                {
+                    conn.Execute("INSERT INTO OxS_TenantMap (OxsTenantId, StudioTenantId)" +
+                                 "VALUES (:oxsId, :studioId)",
+                                 new { oxsId, studioId });
+                }
+                catch (Exception ex)
+                {
+                    AnsiConsole.MarkupLineInterpolated($"[red]Failed to link studio and Ox organization[/] [gray]{studioId}[/]");
+                    AnsiConsole.WriteException(ex);
+                }
             });
 
             return organization;

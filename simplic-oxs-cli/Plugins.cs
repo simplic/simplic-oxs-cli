@@ -5,12 +5,13 @@ using Simplic.Sql;
 using Spectre.Console;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace Simplic.Ox.CLI
 {
     public class Plugins
     {
-        private static readonly IList<IFrameworkEntryPoint> uninitialized = new List<IFrameworkEntryPoint>();
+        private static readonly IList<IFrameworkEntryPoint> uninitialized = [];
 
         /// <summary>
         /// Counts all DLLs from the standard paths: /Bin/ and /Bin/[culture].
@@ -46,12 +47,33 @@ namespace Simplic.Ox.CLI
             });
         }
 
+        public static void RegisterAssemblyPaths(IEnumerable<string> paths)
+        {
+            var dllPaths = paths.ToList();
+            dllPaths.Add(RuntimeEnvironment.GetRuntimeDirectory());
+            foreach (var dllPath in dllPaths)
+                RegisterAssemblyLoader(Path.GetFullPath(dllPath));
+        }
+
+        public static void RegisterAssemblyLoader(string folder)
+        {
+            AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
+            {
+                string assemblyPath = Path.Combine(folder, new AssemblyName(args.Name).Name + ".dll");
+                if (!File.Exists(assemblyPath))
+                    return null;
+                Assembly assembly = Assembly.LoadFrom(assemblyPath);
+                return assembly;
+            };
+        }
+
         public static IList<AssemblyName> Scan(IEnumerable<string> paths)
         {
             // Get all DLLs. Those might not be plugins, but 
-            var dlls = paths.SelectMany(p => Directory.EnumerateFiles(p, "*.dll"));
+            var dlls = paths.Append(RuntimeEnvironment.GetRuntimeDirectory()).SelectMany(p => Directory.EnumerateFiles(p, "*.dll"));
+            var dlls2 = dlls.Select(p => Path.GetFileNameWithoutExtension(p)).ToList();
             // Get all potential plugins
-            var dllsToScan = dlls.Where(p => p.StartsWith("Simplic.PlugIn.")).ToList();
+            var dllsToScan = dlls.Where(p => Path.GetFileNameWithoutExtension(p).StartsWith("Simplic.PlugIn.")).ToList();
 
             var resolver = new PathAssemblyResolver(dlls);
             using var mlc = new MetadataLoadContext(resolver);
@@ -92,14 +114,19 @@ namespace Simplic.Ox.CLI
             return found;
         }
 
-        public static void RegisterAllAssemblies()
+        public static void Register(IEnumerable<string> pluginPaths)
         {
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            foreach (var assembly in assemblies)
-                RegisterAllModules(assembly);
+            AnsiConsole.MarkupLine("[bold]Selected plugins:[/]");
+
+            foreach (var plugin in pluginPaths)
+            {
+                AnsiConsole.MarkupLineInterpolated($"[yellow]{plugin}[/]");
+                var assembly = Assembly.Load(plugin);
+                Register(assembly);
+            }
         }
 
-        public static void RegisterAllModules(Assembly assembly)
+        public static void Register(Assembly assembly)
         {
             Type?[] types;
             try
@@ -112,10 +139,10 @@ namespace Simplic.Ox.CLI
             }
             var moduleTypes = types.Where(t => t is not null && t.IsAssignableTo(typeof(IFrameworkEntryPoint)));
             foreach (var moduleType in moduleTypes)
-                RegisterModule(moduleType!);
+                Register(moduleType!);
         }
 
-        public static void RegisterModule(Type moduleType)
+        public static void Register(Type moduleType)
         {
             AnsiConsole.MarkupLineInterpolated($"Registering module: [yellow]{moduleType.FullName}[/]");
             try
@@ -140,7 +167,7 @@ namespace Simplic.Ox.CLI
             }
         }
 
-        public static void InitializeAllModules()
+        public static void InitializeAll()
         {
             foreach (var module in uninitialized)
             {
