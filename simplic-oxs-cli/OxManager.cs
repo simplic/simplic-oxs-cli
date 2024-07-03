@@ -8,6 +8,13 @@ namespace Simplic.Ox.CLI
 {
     internal class OxManager
     {
+        /// <summary>
+        /// Creates an Ox organization in test mode as well
+        /// as a Studio organization and links both together
+        /// </summary>
+        /// <param name="client"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public async static Task<OrganizationModel> CreateDummyOrganization(Client client, string name)
         {
             var tenantMapService = ServiceLocator.Current.GetInstance<ITenantMapService>();
@@ -67,6 +74,12 @@ namespace Simplic.Ox.CLI
             return organization;
         }
 
+        /// <summary>
+        /// Deletes an organization from Ox and Studio, given its Ox id
+        /// </summary>
+        /// <param name="client"></param>
+        /// <param name="oxsId"></param>
+        /// <returns></returns>
         public async static Task DeleteDummyOrganization(Client client, Guid oxsId)
         {
             var tenantMapService = ServiceLocator.Current.GetInstance<ITenantMapService>();

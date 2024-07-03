@@ -35,10 +35,10 @@ namespace Simplic.Ox.CLI
                 config.AddCommand<InstallCommand>("install")
                     .WithDescription(InstallCommand.Description)
                     .WithExample(InstallCommand.Example);
-                config.AddCommand<SetupCommand>("setup")
-                    .WithDescription(SetupCommand.Description)
-                    .WithExample(SetupCommand.Example);
-                config.SetExceptionHandler(ex => AnsiConsole.WriteException(ex, ExceptionFormats.ShortenEverything));
+                config.AddCommand<UploadCommand>("upload")
+                    .WithDescription(UploadCommand.Description)
+                    .WithExample(UploadCommand.Example);
+                config.SetExceptionHandler((ex, resolver) => AnsiConsole.WriteException(ex, ExceptionFormats.ShortenEverything));
                 config.SetApplicationCulture(CultureInfo.InvariantCulture);
             });
 
@@ -107,7 +107,7 @@ namespace Simplic.Ox.CLI
         /// <summary>
         /// Settings for commands that sync data between Studio and Ox
         /// </summary>
-        internal class SyncSettings : OxOrganizationSettings
+        internal class UploadSettings : OxOrganizationSettings
         {
             [CommandOption("-c|--conn <CONNECTION>")]
             [Description("Database connection string")]
@@ -129,53 +129,61 @@ namespace Simplic.Ox.CLI
         /// <summary>
         /// Command that opens up an interface to setup an organization and synchronize data
         /// </summary>
-        internal sealed class InteractiveCommand : AsyncCommand<SyncSettings>
+        internal sealed class InteractiveCommand : AsyncCommand<UploadSettings>
         {
             public const string Description = "Setup a development environment interactively";
             public static string[] Example = [
                 "interactive",
-                "--uri", "dev-oxs.simplic.io"
+                "--uri", "https://dev-oxs.simplic.io"
             ];
 
-            public override async Task<int> ExecuteAsync(CommandContext context, SyncSettings settings)
+            public override async Task<int> ExecuteAsync(CommandContext context, UploadSettings settings)
             {
                 var uri = settings.Uri ?? Interactive.EnterUri();
                 var email = settings.Email ?? Interactive.EnterEmail();
                 var password = settings.Password ?? Interactive.EnterPassword();
 
+                // Ox initialization
                 Util.InitializeOx();
                 using var client = new Client(uri, email, password);
                 await client.Login();
-                Util.InitializeFramework();
 
+                // Studio initialization
+                Util.InitializeFramework();
                 var dbConn = settings.DbConn ?? Interactive.SelectConnectionString();
                 Util.SetConnectionString(dbConn);
-                Plugins.RegisterAssemblyPaths(settings.DllPaths);
+
+                // Plugin initialization
+                Plugins.RegisterAssemblyLoaders(settings.DllPaths);
+
+                // Select organization (interactive)
                 var oxsId = await Interactive.OrganizationActions(client, settings.Id, settings.Name);
 
                 // The user cancelled login
-                if (!oxsId.HasValue)
+                if (!oxsId.HasValue || client.Token == null)
                     return -1;
 
-                if (client.Token == null)
-                    return -2;
-
+                // Plugin initialization (interactive)
                 var plugins = settings.Plugins ?? (IEnumerable<string>)Interactive.SelectPlugins(settings.DllPaths);
                 Plugins.Register(plugins);
                 Plugins.InitializeAll();
 
+                // Synchronize studio -> Ox (interactive)
                 await Interactive.SyncData(oxsId.Value, client.Token);
 
                 return 0;
             }
         }
 
+        /// <summary>
+        /// Command that creates an Ox account
+        /// </summary>
         internal sealed class RegisterCommand : AsyncCommand<OxAuthSettings>
         {
             public const string Description = "Register an account";
             public static string[] Example = [
                 "register",
-                "--uri", "dev-oxs.simplic.io",
+                "--uri", "https://dev-oxs.simplic.io",
             ];
 
             public override async Task<int> ExecuteAsync(CommandContext context, OxAuthSettings settings)
@@ -184,8 +192,10 @@ namespace Simplic.Ox.CLI
                 var email = settings.Email ?? Interactive.EnterEmail();
                 var password = settings.Password ?? Interactive.EnterPassword();
 
+                // Ox initialization
                 Util.InitializeOx();
                 using var client = new Client(uri, email, password);
+
                 await client.Register();
                 AnsiConsole.MarkupLineInterpolated($"[green]Registration successfull[/]");
 
@@ -193,13 +203,15 @@ namespace Simplic.Ox.CLI
             }
         }
 
-
+        /// <summary>
+        /// Command to create an OxS organization and link it with a new studio organization
+        /// </summary>
         internal sealed class CreateCommand : AsyncCommand<CreateCommand.Settings>
         {
-            public const string Description = "Create a dummy organization";
+            public const string Description = "Create a dummy OxS and Studio organization + link them";
             public static string[] Example = [
                 "create", "\"Pipeline check\"",
-                "--uri", "dev-oxs.simplic.io",
+                "--uri", "https://dev-oxs.simplic.io",
             ];
 
             public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
@@ -209,14 +221,19 @@ namespace Simplic.Ox.CLI
                 var password = settings.Password ?? Interactive.EnterPassword();
                 var name = settings.Name ?? Interactive.EnterName();
 
+                // Ox initialization
                 Util.InitializeOx();
                 using var client = new Client(uri, email, password);
                 await client.Login();
 
+                // Studio initialization
                 var dbConn = settings.DbConn ?? Interactive.SelectConnectionString();
                 Util.InitializeFramework();
                 Util.SetConnectionString(dbConn);
-                Plugins.RegisterAssemblyPaths(settings.DllPaths);
+
+                // Plugin initialization
+                Plugins.RegisterAssemblyLoaders(settings.DllPaths);
+
                 var organization = await OxManager.CreateDummyOrganization(client, name);
                 AnsiConsole.MarkupLineInterpolated($"Created organization [gray]{organization.Id}[/] - [yellow]{organization.Name}[/]");
 
@@ -239,12 +256,15 @@ namespace Simplic.Ox.CLI
             }
         }
 
+        /// <summary>
+        /// Command to delete an OxS and Studio organization
+        /// </summary>
         internal sealed class DeleteCommand : AsyncCommand<DeleteCommand.Settings>
         {
             public const string Description = "Delete a dummy organization";
             public static string[] Example = [
                 "delete",
-                "--uri", "dev-oxs.simplic.io",
+                "--uri", "https://dev-oxs.simplic.io",
                 "-i", "<id>",
             ];
 
@@ -254,16 +274,22 @@ namespace Simplic.Ox.CLI
                 var email = settings.Email ?? Interactive.EnterEmail();
                 var password = settings.Password ?? Interactive.EnterPassword();
 
+                // Ox initialization
                 Util.InitializeOx();
                 using var client = new Client(uri, email, password);
                 await client.Login();
 
+                // Get Ox organization id
                 var id = await settings.GetId(client);
 
+                // Studio initialization
                 var dbConn = settings.DbConn ?? Interactive.SelectConnectionString();
                 Util.InitializeFramework();
                 Util.SetConnectionString(dbConn);
-                Plugins.RegisterAssemblyPaths(settings.DllPaths);
+
+                // Plugin initialization
+                Plugins.RegisterAssemblyLoaders(settings.DllPaths);
+
                 await OxManager.DeleteDummyOrganization(client, id);
                 AnsiConsole.MarkupLineInterpolated($"Deleted organization [gray]{id}[/]");
 
@@ -282,12 +308,15 @@ namespace Simplic.Ox.CLI
             }
         }
 
+        /// <summary>
+        /// Command to list Ox organizations linked to the user
+        /// </summary>
         internal sealed class ListCommand : AsyncCommand<OxAuthSettings>
         {
             public const string Description = "List organizations linked with user";
             public static string[] Example = [
                 "list",
-                "--uri", "dev-oxs.simplic.io",
+                "--uri", "https://dev-oxs.simplic.io",
             ];
 
             public override async Task<int> ExecuteAsync(CommandContext context, OxAuthSettings settings)
@@ -296,6 +325,7 @@ namespace Simplic.Ox.CLI
                 var email = settings.Email ?? Interactive.EnterEmail();
                 var password = settings.Password ?? Interactive.EnterPassword();
 
+                // Ox initialization
                 Util.InitializeOx();
                 using var client = new Client(uri, email, password);
                 await client.Login();
@@ -307,15 +337,19 @@ namespace Simplic.Ox.CLI
             }
         }
 
+        /// <summary>
+        /// Command to downlaod DLLs (plugins and plugin dependencies) from the database
+        /// </summary>
         internal sealed class InstallCommand : AsyncCommand<InstallCommand.Settings>
         {
-            public const string Description = "Download plugins from database";
-            public static string[] Example = ["install", "./simplic/bin/"];
+            public const string Description = "Download dlls from database";
+            public static string[] Example = ["install"];
 
             public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
             {
-                var downloadPath = settings.DownloadPath ?? "./simplic/bin/";
+                var downloadPath = settings.DownloadPath ?? "./.simplic/bin/";
 
+                // Studio initialization
                 var dbConn = settings.DbConn ?? Interactive.SelectConnectionString();
                 Util.InitializeFramework();
                 Util.SetConnectionString(dbConn);
@@ -325,10 +359,11 @@ namespace Simplic.Ox.CLI
                     Directory.Delete(downloadPath, true);
                 Directory.CreateDirectory(downloadPath);
 
-                AnsiConsole.WriteLine($"Downloading {numDlls} Dlls to {downloadPath}");
+                // Downloading plugins
+                AnsiConsole.WriteLine($"Downloading {numDlls} DLLs to {downloadPath}");
                 await AnsiConsole.Progress().StartAsync(async progress =>
                 {
-                    var task = progress.AddTask("Downloading Dlls");
+                    var task = progress.AddTask("Downloading DLLs");
 
                     var i = 0;
                     foreach (var dll in Plugins.DownloadDlls())
@@ -354,38 +389,52 @@ namespace Simplic.Ox.CLI
             }
         }
 
-        internal sealed class SetupCommand : AsyncCommand<SyncSettings>
+        /// <summary>
+        /// Command to run upload services for instance data
+        /// </summary>
+        internal sealed class UploadCommand : AsyncCommand<UploadSettings>
         {
-            public const string Description = "Setup a testing environment with a single command";
+            public const string Description = "Upload instance data from studio to Ox";
             public static string[] Example = [
-                "setup",
-                "--uri", "dev-oxs.simplic.io",
+                "upload",
+                "--uri", "https://dev-oxs.simplic.io",
                 "--email", "automated@example.com",
                 "--password", "1234",
+                "--name", "\"Pipeline Check\"",
                 "--dlls", "./simplic/bin",
                 "--plugin", "Simplic.PlugIn.ArticleMaster",
+                "--sync", "quantity_unit",
             ];
 
-            public async override Task<int> ExecuteAsync(CommandContext context, SyncSettings settings)
+            public async override Task<int> ExecuteAsync(CommandContext context, UploadSettings settings)
             {
                 var uri = settings.Uri ?? Interactive.EnterUri();
                 var email = settings.Email ?? Interactive.EnterEmail();
                 var password = settings.Password ?? Interactive.EnterPassword();
 
+                // Ox initialization
                 Util.InitializeOx();
                 using var client = new Client(uri, email, password);
                 await client.Login();
 
+                // Check if auth successful
+                if (client.Token == null)
+                    return -1;
+
                 var oxsId = await settings.GetId(client);
 
+                // Studio initialization
                 var dbConn = settings.DbConn ?? Interactive.SelectConnectionString();
                 Util.InitializeFramework();
                 Util.SetConnectionString(dbConn);
-                Plugins.RegisterAssemblyPaths(settings.DllPaths);
+
+                // Plugin initialization
+                Plugins.RegisterAssemblyLoaders(settings.DllPaths);
                 var plugins = settings.Plugins ?? (IEnumerable<string>)Interactive.SelectPlugins(settings.DllPaths);
                 Plugins.Register(plugins);
                 Plugins.InitializeAll();
 
+                // Synchronize studio -> Ox (automatic/interactive)
                 if (settings.Contexts != null)
                     await Util.SynchronizeContexts(settings.Contexts, oxsId, client.Token);
                 else

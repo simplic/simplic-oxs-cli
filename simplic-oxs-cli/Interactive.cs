@@ -8,6 +8,11 @@ namespace Simplic.Ox.CLI
     {
         private const string LocalConnectionString = "UID=admin;PWD=school;Server=Local;dbn=DocCenter;charset=UTF-8;Links=TCPIP";
 
+        /// <summary>
+        /// Lets the user select an Ox organization
+        /// </summary>
+        /// <param name="client"></param>
+        /// <returns></returns>
         private async static Task<OrganizationMemberModel> SelectOrganization(Client client)
         {
             var organizations = await client.ListOrganizations();
@@ -21,6 +26,13 @@ namespace Simplic.Ox.CLI
             return organization;
         }
 
+        /// <summary>
+        /// Lets the user create/select/delete an Ox organization
+        /// </summary>
+        /// <param name="client"></param>
+        /// <param name="id"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
         private async static Task<(Guid, string?)> OrganizationAction(Client client, Guid? id, string? name)
         {
             if (id != null)
@@ -68,6 +80,13 @@ namespace Simplic.Ox.CLI
             }
         }
 
+        /// <summary>
+        /// Lets the user create/select/delete Ox organizations
+        /// </summary>
+        /// <param name="client"></param>
+        /// <param name="id"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public async static Task<Guid?> OrganizationActions(Client client, Guid? id, string? name)
         {
             var tenantMapService = ServiceLocator.Current.GetInstance<ITenantMapService>();
@@ -84,6 +103,11 @@ namespace Simplic.Ox.CLI
             return await tenantMapService.GetByOxSTenant(oxsId);
         }
 
+        /// <summary>
+        /// Lets the user select plugins to load for synchronization
+        /// </summary>
+        /// <param name="paths"></param>
+        /// <returns></returns>
         public static List<string> SelectPlugins(IEnumerable<string> paths)
         {
             var plugins = Plugins.Scan(paths).Where(p => p.Name is not null).Select(p => p.Name!);
@@ -95,6 +119,12 @@ namespace Simplic.Ox.CLI
                 .Required(false));
         }
 
+        /// <summary>
+        /// Lets the user select which data to upload and in what order.
+        /// </summary>
+        /// <param name="tenantId"></param>
+        /// <param name="authToken"></param>
+        /// <returns></returns>
         public async static Task SyncData(Guid tenantId, string authToken)
         {
             var sharedIdRepository = ServiceLocator.Current.GetInstance<ISharedIdRepository>();
@@ -137,6 +167,10 @@ namespace Simplic.Ox.CLI
             } while (rerun);
         }
 
+        /// <summary>
+        /// Lets the user select a database
+        /// </summary>
+        /// <returns></returns>
         public static string SelectConnectionString()
         {
             var selConn = AnsiConsole.Prompt(
@@ -153,7 +187,7 @@ namespace Simplic.Ox.CLI
 
         public static Uri EnterUri() => new(AnsiConsole.Ask<string>("[bold magenta]Enter uri[/]      [gray]>[/]"));
         public static string EnterEmail() => AnsiConsole.Ask<string>("[bold magenta]Enter email[/]    [gray]>[/]");
-        public static string EnterPassword() => AnsiConsole.Prompt(new TextPrompt<string>("[bold magenta]Enter password[/] [gray]>[/]").Secret('ö'));
+        public static string EnterPassword() => AnsiConsole.Prompt(new TextPrompt<string>("[bold magenta]Enter password[/] [gray]>[/]").Secret());
         public static string EnterName() => AnsiConsole.Ask<string>("[bold magenta]Enter name[/]     [gray]>[/]");
     }
 }

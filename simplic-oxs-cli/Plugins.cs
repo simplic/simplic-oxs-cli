@@ -47,7 +47,11 @@ namespace Simplic.Ox.CLI
             });
         }
 
-        public static void RegisterAssemblyPaths(IEnumerable<string> paths)
+        /// <summary>
+        /// Registers multiple assembly loaders
+        /// </summary>
+        /// <param name="paths"></param>
+        public static void RegisterAssemblyLoaders(IEnumerable<string> paths)
         {
             var dllPaths = paths.ToList();
             dllPaths.Add(RuntimeEnvironment.GetRuntimeDirectory());
@@ -55,6 +59,10 @@ namespace Simplic.Ox.CLI
                 RegisterAssemblyLoader(Path.GetFullPath(dllPath));
         }
 
+        /// <summary>
+        /// Registers an assembly loader (directory containing DLLs)
+        /// </summary>
+        /// <param name="folder"></param>
         public static void RegisterAssemblyLoader(string folder)
         {
             AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
@@ -67,6 +75,11 @@ namespace Simplic.Ox.CLI
             };
         }
 
+        /// <summary>
+        /// Scans given directories for DLLs that can be loaded as PlugIns
+        /// </summary>
+        /// <param name="paths"></param>
+        /// <returns></returns>
         public static IList<AssemblyName> Scan(IEnumerable<string> paths)
         {
             // Get all DLLs. Those might not be plugins, but 
@@ -114,18 +127,27 @@ namespace Simplic.Ox.CLI
             return found;
         }
 
-        public static void Register(IEnumerable<string> pluginPaths)
+        /// <summary>
+        /// Loads and registers plugins with the given names
+        /// </summary>
+        /// <param name="pluginNames"></param>
+        public static void Register(IEnumerable<string> pluginNames)
         {
             AnsiConsole.MarkupLine("[bold]Selected plugins:[/]");
-
-            foreach (var plugin in pluginPaths)
-            {
+            foreach(var plugin in pluginNames)
                 AnsiConsole.MarkupLineInterpolated($"[yellow]{plugin}[/]");
+
+            foreach (var plugin in pluginNames)
+            {
                 var assembly = Assembly.Load(plugin);
                 Register(assembly);
             }
         }
 
+        /// <summary>
+        /// Registers a single plugin
+        /// </summary>
+        /// <param name="assembly"></param>
         public static void Register(Assembly assembly)
         {
             Type?[] types;
@@ -142,6 +164,10 @@ namespace Simplic.Ox.CLI
                 Register(moduleType!);
         }
 
+        /// <summary>
+        /// Registers a plugin entrypoint
+        /// </summary>
+        /// <param name="moduleType"></param>
         public static void Register(Type moduleType)
         {
             AnsiConsole.MarkupLineInterpolated($"Registering module: [yellow]{moduleType.FullName}[/]");
@@ -167,6 +193,9 @@ namespace Simplic.Ox.CLI
             }
         }
 
+        /// <summary>
+        /// Initializes all loaded plugins
+        /// </summary>
         public static void InitializeAll()
         {
             foreach (var module in uninitialized)
@@ -185,6 +214,10 @@ namespace Simplic.Ox.CLI
             uninitialized.Clear();
         }
 
+        /// <summary>
+        /// Registers and intializes a single plugin
+        /// </summary>
+        /// <typeparam name="TModule"></typeparam>
         public static void RegisterAndInitializeModule<TModule>() where TModule : IFrameworkEntryPoint, new()
         {
             AnsiConsole.MarkupLineInterpolated($"Registering module: [yellow]{typeof(TModule).FullName}[/]");

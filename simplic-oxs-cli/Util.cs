@@ -6,7 +6,6 @@ using Simplic.Configuration;
 using Simplic.Configuration.Data;
 using Simplic.Configuration.Data.DB;
 using Simplic.Configuration.Service;
-using Simplic.Framework.Core;
 using Simplic.Framework.DAL;
 using Simplic.MessageBroker;
 using Simplic.Ox.CLI.Dummy;
@@ -18,9 +17,6 @@ using Simplic.Studio.Ox;
 using Simplic.Studio.Ox.Data.DB;
 using Simplic.Studio.Ox.Service;
 using Spectre.Console;
-using System.IO;
-using System.Reflection;
-using System.Windows.Controls;
 using Unity;
 using Unity.ServiceLocation;
 
@@ -28,7 +24,7 @@ namespace Simplic.Ox.CLI
 {
     public static class Util
     {
-        public static readonly UnityContainer container = new UnityContainer();
+        public static readonly UnityContainer container = new();
 
         /// <summary>
         /// Initialize the simplic framework
@@ -76,6 +72,9 @@ namespace Simplic.Ox.CLI
             container.RegisterType<ISharedIdService, SharedIdService>();
         }
 
+        /// <summary>
+        /// Run the Studio-Ox main entry point
+        /// </summary>
         public static void InitializeOx()
         {
             AnsiConsole.WriteLine("Initializing Ox");
@@ -83,8 +82,39 @@ namespace Simplic.Ox.CLI
             AnsiConsole.WriteLine("Initialized Ox");
         }
 
-        public static IEnumerable<IInstanceDataUploadService> GetUploadServices() => container.ResolveAll<IInstanceDataUploadService>();
+        /// <summary>
+        /// Resolves all registered services for Ox upload. This is done instead of
+        /// container.ResolveAll to be able to catch registration errors.
+        /// </summary>
+        /// <returns></returns>
+        public static IEnumerable<IInstanceDataUploadService> GetUploadServices()
+        {
+            foreach (var registration in container.Registrations)
+            {
+                if (registration.RegisteredType == typeof(IInstanceDataUploadService))
+                {
+                    IInstanceDataUploadService? service = null;
+                    try
+                    {
+                        service = container.Resolve<IInstanceDataUploadService>(registration.Name);
+                    }
+                    catch (Exception ex)
+                    {
+                        AnsiConsole.WriteException(ex, ExceptionFormats.NoStackTrace);
+                    }
+                    if (service != null)
+                        yield return service;
+                }
+            }
+        }
 
+        /// <summary>
+        /// Runs all synchronization services with the given names. Plugins have to be loaded beforehand.
+        /// </summary>
+        /// <param name="contexts"></param>
+        /// <param name="tenantId"></param>
+        /// <param name="authToken"></param>
+        /// <returns></returns>
         public static async Task SynchronizeContexts(IEnumerable<string> contexts, Guid tenantId, string authToken)
         {
             var sharedIdRepository = ServiceLocator.Current.GetInstance<ISharedIdRepository>();

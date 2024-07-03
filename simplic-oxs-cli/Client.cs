@@ -7,6 +7,9 @@ using System.Net.Http.Headers;
 
 namespace Simplic.Ox.CLI
 {
+    /// <summary>
+    /// Ox client containing various methods required by the CLI
+    /// </summary>
     public class Client : IDisposable
     {
         private readonly ISharedIdRepository sharedIdRepository;
@@ -22,6 +25,12 @@ namespace Simplic.Ox.CLI
 
         private bool disposed = false;
 
+        /// <summary>
+        /// Create new client without authorizing
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <param name="email"></param>
+        /// <param name="password"></param>
         public Client(Uri uri, string email, string password)
         {
             this.email = email;
@@ -36,6 +45,10 @@ namespace Simplic.Ox.CLI
             organizationClient = new(httpClient);
         }
 
+        /// <summary>
+        /// Create an account using the stored credentials
+        /// </summary>
+        /// <returns></returns>
         public async Task Register()
         {
             await authClient.RegisterAsync(new RegisterRequest
@@ -45,12 +58,23 @@ namespace Simplic.Ox.CLI
             });
         }
 
+        /// <summary>
+        /// Login an account using the stored credentials.
+        /// This must be called before accessing any Ox-related methods.
+        /// </summary>
+        /// <returns></returns>
         public async Task Login()
         {
             if (string.IsNullOrWhiteSpace(Token) || !CheckJWTExpirationValid(Token))
                 Token = await GetAuthorization();
         }
 
+        /// <summary>
+        /// Select an organization
+        /// </summary>
+        /// <param name="organizationId"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public async Task LoginOrganization(Guid organizationId)
         {
             LoginResponse? authResponse;
@@ -72,6 +96,12 @@ namespace Simplic.Ox.CLI
             Token = authResponse.Token;
         }
 
+        /// <summary>
+        /// Create an organization set to testing mode (can be deleted later)
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="address"></param>
+        /// <returns></returns>
         public Task<OrganizationModel> CreateDummyOrganization(string name, AddressModel address) =>
             organizationClient.OrganizationPostAsync(new CreateOrganizationRequest
             {
@@ -80,22 +110,48 @@ namespace Simplic.Ox.CLI
                 Dummy = true,
             });
 
+        /// <summary>
+        /// Get an organization by its Ox id
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         public async Task<OrganizationMemberModel?> GetOrganizationById(Guid id)
         {
             var organizations = await ListOrganizations();
             return organizations.FirstOrDefault(o => o.OrganizationId == id);
         }
 
+        /// <summary>
+        /// Get an organization by its Ox name
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public async Task<OrganizationMemberModel?> GetOrganizationByName(string name)
         {
             var organizations = await ListOrganizations();
             return organizations.FirstOrDefault(o => o.OrganizationName == name);
         }
 
+        /// <summary>
+        /// Get a list of organizations by this user
+        /// </summary>
+        /// <returns></returns>
         public Task<ICollection<OrganizationMemberModel>> ListOrganizations() => organizationClient.GetForUserAsync();
 
+        /// <summary>
+        /// Delete an organization by its id
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         public Task DeleteOrganization(Guid id) => organizationClient.OrganizationDeleteAsync(id);
 
+        /// <summary>
+        /// Synchronize/Upload data from Simplic Studio
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="context"></param>
+        /// <param name="tenantId"></param>
+        /// <returns></returns>
         public async Task UploadData(Guid id, string context, Guid tenantId)
         {
             var service = instanceDataUploadServices.FirstOrDefault(x => x.ContextName == context);
@@ -143,7 +199,12 @@ namespace Simplic.Ox.CLI
             await service.UpdateUpload(sharedId.InstanceDataId, sharedId.OxSId, Token);
             Console.WriteLine($"  > Done");
         }
-
+        
+        /// <summary>
+        /// Requests an auth token
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         private async Task<string> GetAuthorization()
         {
             var authResponse = await authClient.LoginAsync(new LoginRequest()
@@ -161,6 +222,11 @@ namespace Simplic.Ox.CLI
             return authResponse.Token;
         }
 
+        /// <summary>
+        /// Checks if a token is still valid or expired
+        /// </summary>
+        /// <param name="jwt"></param>
+        /// <returns></returns>
         private bool CheckJWTExpirationValid(string jwt)
         {
             try
@@ -187,6 +253,11 @@ namespace Simplic.Ox.CLI
             }
         }
 
+        /// <summary>
+        /// Extracts the organization id from a token
+        /// </summary>
+        /// <param name="jwt"></param>
+        /// <returns></returns>
         private Guid? GetOrganizationIdFromJWT(string jwt)
         {
             try
