@@ -1,6 +1,4 @@
-﻿using CommonServiceLocator;
-using Simplic.Studio.Ox;
-using Spectre.Console;
+﻿using Spectre.Console;
 using Spectre.Console.Cli;
 using System.ComponentModel;
 using System.Globalization;
@@ -59,6 +57,8 @@ namespace Simplic.Ox.CLI
         /// </summary>
         internal class OxAuthSettings : CommandSettings
         {
+            public string Blah { get; init; }
+
             [CommandOption("-u|--uri <URI>")]
             [Description("URI of the Ox service")]
             public Uri? Uri { get; init; }
