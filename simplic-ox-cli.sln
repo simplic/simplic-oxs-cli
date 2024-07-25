@@ -5,9 +5,9 @@ VisualStudioVersion = 17.7.34221.43
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simplic.Ox.CLI", "simplic-oxs-cli\Simplic.Ox.CLI.csproj", "{EB243DC8-79D9-424B-A13A-1BBC3005BC3E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simplic.OxS.CLI.Commands.Identity", "Simplic.OxS.CLI.Commands.Identity\Simplic.OxS.CLI.Commands.Identity.csproj", "{2CD4643F-8F19-40D7-897F-4748F870F1CE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simplic.OxS.CLI.Identity", "Simplic.OxS.CLI.Commands.Identity\Simplic.OxS.CLI.Identity.csproj", "{2CD4643F-8F19-40D7-897F-4748F870F1CE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simplic.OxS.CLI.Core", "Simplic.OxS.CLI.Framework\Simplic.OxS.CLI.Core.csproj", "{FED14E1F-C0D6-46BA-945A-B1F65C101D3D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simplic.OxS.CLI.Core", "Simplic.OxS.CLI.Core\Simplic.OxS.CLI.Core.csproj", "{FED14E1F-C0D6-46BA-945A-B1F65C101D3D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

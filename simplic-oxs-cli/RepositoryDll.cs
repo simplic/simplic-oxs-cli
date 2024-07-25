@@ -10,6 +10,6 @@
         /// <summary>
         /// Content of the file
         /// </summary>
-        public byte[] Content { get; set; } = Array.Empty<byte>();
+        public byte[] Content { get; set; } = [];
     }
 }

@@ -3,5 +3,7 @@
     public interface ICommandGroup
     {
         public void Register(CommandGroupBuilder builder);
+
+        public string Name { get; }
     }
 }

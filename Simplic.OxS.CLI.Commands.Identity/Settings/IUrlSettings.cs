@@ -1,10 +1,10 @@
 ﻿using Spectre.Console.Cli;
 
-namespace Simplic.OxS.CLI.Commands.Identity
+namespace Simplic.OxS.CLI.Identity.Settings
 {
     public interface IUrlSettings
     {
         [CommandOption("--url")]
-        string? Url { get; init; }
+        Uri? Uri { get; init; }
     }
 }

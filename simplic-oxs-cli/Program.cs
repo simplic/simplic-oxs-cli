@@ -43,7 +43,8 @@ namespace Simplic.Ox.CLI
             try
             {
                 Util.InitializeContainer();
-                await app.RunAsync(args);
+                await Run.MyMain(args);
+                //await app.RunAsync(args);
             }
             catch (Exception ex)
             {
