@@ -204,5 +204,7 @@ namespace Simplic.OxS.CLI.Identity
         }
 
         public string? Token { get; private set; }
+
+        public HttpClient HttpClient => httpClient;
     }
 }

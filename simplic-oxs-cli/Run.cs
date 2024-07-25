@@ -1,5 +1,6 @@
-﻿using Simplic.OxS.CLI.Identity;
-using Simplic.OxS.CLI.Core;
+﻿using Simplic.OxS.CLI.Core;
+using Simplic.OxS.CLI.Identity;
+using Simplic.OxS.CLI.Organization;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.Globalization;
@@ -15,6 +16,7 @@ namespace Simplic.Ox.CLI
 
             var registry = new CommandRegistry();
             registry.Add<IdentityCommandGroup>();
+            registry.Add<OrganizationCommandGroup>();
             return registry.RunAsync(args, container, config =>
             {
                 config.SetExceptionHandler((ex, resolver) => AnsiConsole.WriteException(ex, ExceptionFormats.ShortenEverything));

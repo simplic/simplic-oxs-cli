@@ -9,7 +9,7 @@ namespace Simplic.OxS.CLI.Identity
     {
         public string Name => "identity";
 
-        public void Register(CommandGroupBuilder context) => context
+        public void Register(CommandGroupBuilder builder) => builder
             .Module<LoginModule, ILoginSettings>()
             .Module<SelectOrganizationModule, ISelectOrganizationSettings>(builder => builder
                 .RequireModule<LoginModule>()
