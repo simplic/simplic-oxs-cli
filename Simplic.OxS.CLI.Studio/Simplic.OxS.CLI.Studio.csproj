@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommonServiceLocator" Version="2.0.7" />
+    <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="Simplic.Base" Version="10.0.224.405" />
+    <PackageReference Include="Simplic.Framework.Base" Version="10.0.224.405" />
+    <PackageReference Include="Simplic.Framework.DAL" Version="10.0.224.405" />
+    <PackageReference Include="Simplic.Sql" Version="6.3.121.1212" />
+    <PackageReference Include="System.Reflection.MetadataLoadContext" Version="9.0.0-preview.5.24306.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Simplic.OxS.CLI.Commands.Identity\Simplic.OxS.CLI.Identity.csproj" />
+    <ProjectReference Include="..\Simplic.OxS.CLI.Core\Simplic.OxS.CLI.Core.csproj" />
+  </ItemGroup>
+
+</Project>

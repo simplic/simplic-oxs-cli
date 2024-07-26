@@ -17,6 +17,18 @@ namespace Simplic.OxS.CLI.Core
             this.path = path;
         }
 
+        public CommandGroupBuilder Group(string name, Action<CommandGroupBuilder>? action = null)
+        {
+            configurator.AddBranch(name, configurator =>
+            {
+                var builder = new CommandGroupBuilder(configurator, container, [.. path, name]);
+                action?.Invoke(builder);
+                foreach (var pair in builder.modules)
+                    modules.Add(pair.Key, pair.Value);
+            });
+            return this;
+        }
+
         /// <summary>
         /// Register a command
         /// </summary>
@@ -25,7 +37,7 @@ namespace Simplic.OxS.CLI.Core
         /// <param name="name"></param>
         /// <param name="action"></param>
         /// <returns></returns>
-        public CommandGroupBuilder Command<TCommand, TSettings>(string name, Action<CommandBuilder<TSettings>>? action)
+        public CommandGroupBuilder Command<TCommand, TSettings>(string name, Action<CommandBuilder<TSettings>>? action = null)
             where TCommand : class, ICommandLimiter<TSettings>
             where TSettings : CommandSettings
         {

@@ -1,0 +1,35 @@
+﻿using Simplic.OxS.CLI.Core;
+using Simplic.OxS.CLI.Studio.Settings;
+using Spectre.Console;
+using System.Reflection;
+using System.Runtime.InteropServices;
+
+namespace Simplic.OxS.CLI.Studio.Modules
+{
+    public class PluginModule : IAsyncModule<IPluginSettings>
+    {
+        public Task Execute(IPluginSettings settings)
+        {
+            // Add DLL paths
+            var dllPaths = settings.DllPaths.ToList();
+            dllPaths.Add(RuntimeEnvironment.GetRuntimeDirectory());
+            foreach (var dllPath in dllPaths)
+                PluginHelper.RegisterAssemblyLoader(Path.GetFullPath(dllPath));
+
+            // Plugin initialization (interactive)
+            var plugins = settings.Plugins ?? (IEnumerable<string>)Interactive.SelectPlugins(settings.DllPaths);
+            AnsiConsole.MarkupLine("[bold]Selected plugins:[/]");
+            foreach (var plugin in plugins)
+                AnsiConsole.MarkupLineInterpolated($"[yellow]{plugin}[/]");
+
+            foreach (var plugin in plugins)
+            {
+                var assembly = Assembly.Load(plugin);
+                PluginHelper.Register(assembly);
+            }
+            PluginHelper.InitializeAll();
+
+            return Task.CompletedTask;
+        }
+    }
+}
