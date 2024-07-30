@@ -1,6 +1,6 @@
 ﻿namespace Simplic.OxS.CLI.Identity.Settings
 {
-    public interface ILoginSettings : IUrlSettings
+    public interface IOxSettings : IUrlSettings
     {
         string? Email { get; init; }
         string? Password { get; init; }

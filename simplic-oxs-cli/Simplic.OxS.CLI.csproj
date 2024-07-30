@@ -28,7 +28,6 @@
     <PackageReference Include="Simplic.Framework.DAL" Version="10.0.224.405" />
     <PackageReference Include="Simplic.MessageBroker" Version="1.5.523.131" />
     <PackageReference Include="Simplic.PlugIn.ArticleMaster" Version="3.3.823.1002" />
-    <PackageReference Include="Simplic.PlugIn.Studio.Ox.Server" Version="1.0.1023.621" />
     <PackageReference Include="Simplic.Session" Version="6.4.20.322" />
     <PackageReference Include="Simplic.Session.Service" Version="6.4.20.322" />
     <PackageReference Include="Simplic.Sql" Version="6.3.121.1212" />
@@ -54,6 +53,7 @@
     <ProjectReference Include="..\Simplic.OxS.CLI.Commands.Identity\Simplic.OxS.CLI.Identity.csproj" />
     <ProjectReference Include="..\Simplic.OxS.CLI.Core\Simplic.OxS.CLI.Core.csproj" />
     <ProjectReference Include="..\Simplic.OxS.CLI.Organization\Simplic.OxS.CLI.Organization.csproj" />
+    <ProjectReference Include="..\Simplic.OxS.CLI.Studio\Simplic.OxS.CLI.Studio.csproj" />
   </ItemGroup>
 
 </Project>

@@ -6,18 +6,16 @@ using System.Runtime.InteropServices;
 
 namespace Simplic.OxS.CLI.Studio.Modules
 {
-    public class PluginModule : IAsyncModule<IPluginSettings>
+    public class PluginLoaderModule : IAsyncModule<IPluginLoaderSettings>
     {
-        public Task Execute(IPluginSettings settings)
+        public Task Execute(IPluginLoaderSettings settings)
         {
             // Add DLL paths
-            var dllPaths = settings.DllPaths.ToList();
-            dllPaths.Add(RuntimeEnvironment.GetRuntimeDirectory());
-            foreach (var dllPath in dllPaths)
-                PluginHelper.RegisterAssemblyLoader(Path.GetFullPath(dllPath));
+            PluginHelper.RegisterAssemblyLoader(Path.GetFullPath(settings.DllPath));
+            PluginHelper.RegisterAssemblyLoader(Path.GetFullPath(RuntimeEnvironment.GetRuntimeDirectory()));
 
             // Plugin initialization (interactive)
-            var plugins = settings.Plugins ?? (IEnumerable<string>)Interactive.SelectPlugins(settings.DllPaths);
+            var plugins = settings.Plugins ?? (IEnumerable<string>)Interactive.SelectPlugins([settings.DllPath, RuntimeEnvironment.GetRuntimeDirectory()]);
             AnsiConsole.MarkupLine("[bold]Selected plugins:[/]");
             foreach (var plugin in plugins)
                 AnsiConsole.MarkupLineInterpolated($"[yellow]{plugin}[/]");

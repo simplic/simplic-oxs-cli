@@ -6,7 +6,7 @@ namespace Simplic.Ox.CLI.Dummy
     /// A dummy class meant as a drop-in replacement to prevent unity
     /// registration errors without having to initialize a message bus
     /// </summary>
-    public class MessageBus : IMessageBus
+    public class DummyMessageBus : IMessageBus
     {
         public void Publish<T>(T message, CancellationToken cancellationToken = default) where T : class => throw new NotImplementedException("Dummy MessageBus");
 

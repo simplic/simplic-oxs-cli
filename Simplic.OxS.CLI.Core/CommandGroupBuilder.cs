@@ -46,8 +46,8 @@ namespace Simplic.OxS.CLI.Core
             var config = configurator
                 .AddCommand<TCommand>(name)
                 .WithData(new CommandData { RequiredModules = builder.modules });
-            if (builder.example != null)
-                config.WithExample([.. path, .. builder.example]);
+            foreach (var example in builder.examples)
+                config.WithExample([.. path, name, .. example]);
             return this;
         }
 

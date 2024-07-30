@@ -3,9 +3,9 @@ using Simplic.OxS.CLI.Identity.Settings;
 
 namespace Simplic.OxS.CLI.Identity.Modules
 {
-    internal class SelectOrganizationModule : IAsyncModule<ISelectOrganizationSettings>
+    public class OxOrganizationModule : IAsyncModule<IOxOrganizationSettings>
     {
-        public Task Execute(ISelectOrganizationSettings settings)
+        public Task Execute(IOxOrganizationSettings settings)
         {
             var id = settings.OrganizationId ?? Interactive.EnterOrganizationId();
 

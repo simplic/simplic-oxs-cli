@@ -5,11 +5,10 @@
         internal List<Type> required = [];
 
         internal ModuleBuilder() { }
-        public ModuleBuilder<TSettings> RequireModule<TModule>() where TModule : IAsyncModule<TSettings>
+        public ModuleBuilder<TSettings> Depends<TModule>() where TModule : IAsyncModule<TSettings>
         {
             required.Add(typeof(TModule));
             return this;
         }
-
     }
 }

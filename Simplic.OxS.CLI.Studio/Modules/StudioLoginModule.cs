@@ -6,9 +6,9 @@ using Spectre.Console;
 
 namespace Simplic.OxS.CLI.Studio.Modules
 {
-    public class StudioModule : IAsyncModule<IStudioSettings>
+    public class StudioLoginModule : IAsyncModule<IStudioLoginSettings>
     {
-        public Task Execute(IStudioSettings settings)
+        public Task Execute(IStudioLoginSettings settings)
         {
             var connection = settings.ConnectionString ?? Interactive.SelectConnectionString();
 

@@ -1,4 +1,5 @@
-﻿using Spectre.Console;
+﻿using Simplic.OxS.CLI.Identity.Settings;
+using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace Simplic.OxS.CLI.Identity.Commands
@@ -7,20 +8,14 @@ namespace Simplic.OxS.CLI.Identity.Commands
     {
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
-            var uri = settings.Uri ?? Interactive.EnterUri();
-            var email = settings.Email ?? Interactive.EnterEmail();
-            var password = settings.Password ?? Interactive.EnterPassword();
-
-            var client = new Client(uri, email, password);
-
             await AnsiConsole.Status()
                 .Spinner(Spinner.Known.Flip)
-                .StartAsync("[olive]Creating account[/]", context => client.Register());
+                .StartAsync("[olive]Creating account[/]", context => settings.AuthClient!.Register());
 
             return 0;
         }
 
-        internal class Settings : CommandSettings
+        internal class Settings : CommandSettings, IOxSettings
         {
             [CommandOption("-u|--uri")]
             public Uri? Uri { get; init; }
@@ -30,6 +25,8 @@ namespace Simplic.OxS.CLI.Identity.Commands
 
             [CommandOption("-p|--password")]
             public string? Password { get; init; }
+
+            public Client? AuthClient { get; set; }
         }
     }
 }

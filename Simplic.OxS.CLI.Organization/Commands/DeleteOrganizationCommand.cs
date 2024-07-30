@@ -21,7 +21,7 @@ namespace Simplic.OxS.CLI.Organization.Commands
             return 0;
         }
 
-        public class Settings : CommandSettings, ILoginSettings
+        public class Settings : CommandSettings, IOxSettings
         {
             [CommandOption("-u|--uri <SERVER>")]
             public Uri? Uri { get; init; }

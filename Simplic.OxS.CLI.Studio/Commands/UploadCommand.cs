@@ -8,12 +8,18 @@ namespace Simplic.OxS.CLI.Studio.Commands
 {
     internal class UploadCommand : AsyncCommand<UploadCommand.Settings>
     {
-        public override Task<int> ExecuteAsync(CommandContext context, Settings settings)
+        public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
-            throw new NotImplementedException();
+            var tenantId = settings.TenantId ?? Interactive.EnterTenant();
+
+            if (settings.Contexts == null)
+                await Interactive.Upload(tenantId, settings.AuthClient!.Token!);
+            else
+                await UploadHelper.Upload(settings.Contexts, tenantId, settings.AuthClient!.Token!);
+            return 0;
         }
 
-        internal class Settings : CommandSettings, ILoginSettings, IStudioSettings, IPluginSettings
+        internal class Settings : CommandSettings, IOxOrganizationSettings, IStudioLoginSettings, IPluginLoaderSettings
         {
             [CommandOption("-u|--uri")]
             public Uri? Uri { get; init; }
@@ -24,7 +30,9 @@ namespace Simplic.OxS.CLI.Studio.Commands
             [CommandOption("-p|--password")]
             public string? Password { get; init; }
 
-            public Client? AuthClient { get; set; }
+            [CommandOption("-o|--organization")]
+            [Description("Database connection string")]
+            public Guid? OrganizationId { get; init; }
 
             [CommandOption("-c|--conn <CONNECTION>")]
             [Description("Database connection string")]
@@ -32,7 +40,8 @@ namespace Simplic.OxS.CLI.Studio.Commands
 
             [CommandOption("-D|--dlls <DIR>")]
             [Description("Add a path containing DLLs that can be loaded")]
-            public string[] DllPaths { get; init; } = [];
+            [DefaultValue("./.simplic/bin")]
+            public string DllPath { get; init; } = null!;
 
             [CommandOption("-P|--plugin <NAME>")]
             [Description("Load a plugin")]
@@ -41,6 +50,12 @@ namespace Simplic.OxS.CLI.Studio.Commands
             [CommandOption("-s|--sync <CONTEXT>")]
             [Description("Synchronize a context")]
             public string[]? Contexts { get; init; }
+
+            [CommandOption("-t|--tenant <TENANT>")]
+            [Description("Studio tenant")]
+            public Guid? TenantId { get; init; }
+
+            public Client? AuthClient { get; set; }
         }
     }
 }

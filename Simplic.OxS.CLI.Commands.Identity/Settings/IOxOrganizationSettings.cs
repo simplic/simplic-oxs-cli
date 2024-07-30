@@ -1,6 +1,6 @@
 ﻿namespace Simplic.OxS.CLI.Identity.Settings
 {
-    public interface ISelectOrganizationSettings : ILoginSettings
+    public interface IOxOrganizationSettings : IOxSettings
     {
         Guid? OrganizationId { get; init; }
     }

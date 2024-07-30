@@ -1,6 +1,6 @@
 ﻿namespace Simplic.OxS.CLI.Studio.Settings
 {
-    public interface IStudioSettings
+    public interface IStudioLoginSettings
     {
         public string? ConnectionString { get; init; }
     }

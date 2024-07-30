@@ -10,34 +10,42 @@ namespace Simplic.OxS.CLI.Identity
         public string Name => "identity";
 
         public void Register(CommandGroupBuilder builder) => builder
-            .Module<LoginModule, ILoginSettings>()
-            .Module<SelectOrganizationModule, ISelectOrganizationSettings>(builder => builder
-                .RequireModule<LoginModule>()
+            .Module<OxModule, IOxSettings>()
+            .Module<OxLoginModule, IOxSettings>(builder => builder
+                .Depends<OxModule>()
+            )
+            .Module<OxOrganizationModule, IOxOrganizationSettings>(builder => builder
+                .Depends<OxLoginModule>()
             )
             .Command<RegisterCommand, RegisterCommand.Settings>("register", builder => builder
+                .RequireModule<OxModule>()
                 .Example([
-                    "register",
                     "--uri", "https://dev-oxs.simplic.io",
                     "--email", "new-user@simplic.biz",
                     "--password", "password1234",
                 ])
             )
             .Command<GetTokenCommand, GetTokenCommand.Settings>("get-token", builder => builder
-                .RequireModule<LoginModule>()
+                .RequireModule<OxLoginModule>()
                 .Example([
-                    "get-token",
                     "--uri", "https://dev-oxs.simplic.io",
                     "--email", "user@simplic.biz",
                     "--password", "password1234",
                 ])
             )
             .Command<ChangePasswordCommand, ChangePasswordCommand.Settings>("change-password", builder => builder
-                .RequireModule<LoginModule>()
+                .RequireModule<OxLoginModule>()
                 .Example([
-                    "change-password",
                     "--uri", "https://dev-oxs.simplic.io",
                     "--email", "user@simplic.biz",
                     "--password", "old-password1234",
+                    "new-password5678",
+                ])
+            )
+            .Command<ResetPasswordCommand, ResetPasswordCommand.Settings>("reset-password", builder => builder
+                .Example([
+                    "--uri", "https://dev-oxs.simplic.io",
+                    "--email", "user@simplic.biz",
                     "new-password5678",
                 ])
             );

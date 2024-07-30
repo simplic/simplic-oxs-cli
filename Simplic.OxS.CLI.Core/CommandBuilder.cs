@@ -2,14 +2,14 @@
 {
     public class CommandBuilder<TSettings>
     {
-        internal string[]? example;
+        internal List<string[]> examples = [];
         internal List<Type> modules = [];
 
         internal CommandBuilder() { }
 
-        public CommandBuilder<TSettings> Example(string[]? example)
+        public CommandBuilder<TSettings> Example(string[] example)
         {
-            this.example = example;
+            examples.Add(example);
             return this;
         }
 

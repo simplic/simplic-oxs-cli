@@ -188,7 +188,7 @@ namespace Simplic.OxS.CLI.Studio
         /// Registers and intializes a single plugin
         /// </summary>
         /// <typeparam name="TModule"></typeparam>
-        public static void RegisterAndInitializeModule<TModule>() where TModule : IFrameworkEntryPoint, new()
+        public static void InitializeModule<TModule>() where TModule : IFrameworkEntryPoint, new()
         {
             AnsiConsole.MarkupLineInterpolated($"Registering module: [yellow]{typeof(TModule).FullName}[/]");
 
