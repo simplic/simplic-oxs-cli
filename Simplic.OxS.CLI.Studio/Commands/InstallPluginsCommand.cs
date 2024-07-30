@@ -15,8 +15,7 @@ namespace Simplic.OxS.CLI.Studio.Commands
                 Directory.Delete(downloadPath, true);
             Directory.CreateDirectory(downloadPath);
 
-            return await AnsiConsole
-                .Progress()
+            return await AnsiConsole.Progress()
                 .Columns(
                     new TaskDescriptionColumn(),
                     new ProgressBarColumn(),

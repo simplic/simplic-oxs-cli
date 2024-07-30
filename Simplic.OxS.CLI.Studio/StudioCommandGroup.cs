@@ -14,12 +14,12 @@ namespace Simplic.OxS.CLI.Studio
             .Module<PluginLoaderModule, IPluginLoaderSettings>()
             .Module<StudioLoginModule, IStudioLoginSettings>()
             .Command<InstallPluginsCommand, InstallPluginsCommand.Settings>("download-plugins", builder => builder
-                .RequireModule<StudioLoginModule>()
+                .Depends<StudioLoginModule>()
             )
             .Command<UploadCommand, UploadCommand.Settings>("upload", builder => builder
-                .RequireModule<OxOrganizationModule>()
-                .RequireModule<StudioLoginModule>()
-                .RequireModule<PluginLoaderModule>()
+                .Depends<OxOrganizationModule>()
+                .Depends<StudioLoginModule>()
+                .Depends<PluginLoaderModule>()
             );
     }
 }

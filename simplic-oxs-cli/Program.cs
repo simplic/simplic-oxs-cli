@@ -1,4 +1,5 @@
 ﻿using CommonServiceLocator;
+using Simplic.OxS.CLI.CDN;
 using Simplic.OxS.CLI.Core;
 using Simplic.OxS.CLI.Identity;
 using Simplic.OxS.CLI.Organization;
@@ -25,6 +26,7 @@ namespace Simplic.OxS.CLI
                 Util.InitializeContainer(container);
 
                 var registry = new CommandRegistry();
+                registry.Add<CdnCommandGroup>();
                 registry.Add<IdentityCommandGroup>();
                 registry.Add<OrganizationCommandGroup>();
                 registry.Add<StudioCommandGroup>();

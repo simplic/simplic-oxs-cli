@@ -13,7 +13,7 @@
             return this;
         }
 
-        public CommandBuilder<TSettings> RequireModule<TModule>() where TModule : IAsyncModule<TSettings>
+        public CommandBuilder<TSettings> Depends<TModule>() where TModule : IAsyncModule<TSettings>
         {
             modules.Add(typeof(TModule));
             return this;

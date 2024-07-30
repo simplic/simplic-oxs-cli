@@ -18,7 +18,7 @@ namespace Simplic.OxS.CLI.Identity
                 .Depends<OxLoginModule>()
             )
             .Command<RegisterCommand, RegisterCommand.Settings>("register", builder => builder
-                .RequireModule<OxModule>()
+                .Depends<OxModule>()
                 .Example([
                     "--uri", "https://dev-oxs.simplic.io",
                     "--email", "new-user@simplic.biz",
@@ -26,7 +26,7 @@ namespace Simplic.OxS.CLI.Identity
                 ])
             )
             .Command<GetTokenCommand, GetTokenCommand.Settings>("get-token", builder => builder
-                .RequireModule<OxLoginModule>()
+                .Depends<OxLoginModule>()
                 .Example([
                     "--uri", "https://dev-oxs.simplic.io",
                     "--email", "user@simplic.biz",
@@ -34,7 +34,7 @@ namespace Simplic.OxS.CLI.Identity
                 ])
             )
             .Command<ChangePasswordCommand, ChangePasswordCommand.Settings>("change-password", builder => builder
-                .RequireModule<OxLoginModule>()
+                .Depends<OxLoginModule>()
                 .Example([
                     "--uri", "https://dev-oxs.simplic.io",
                     "--email", "user@simplic.biz",
