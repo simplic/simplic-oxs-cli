@@ -5,10 +5,10 @@ namespace Simplic.OxS.CLI.Identity.Commands
 {
     public class GetTokenCommand : AsyncCommand<GetTokenCommand.Settings>
     {
-        public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+        public override Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
             Console.WriteLine(settings.AuthClient!.Token);
-            return 0;
+            return Task.FromResult(0);
         }
 
         public class Settings : CommandSettings, ILoginSettings
