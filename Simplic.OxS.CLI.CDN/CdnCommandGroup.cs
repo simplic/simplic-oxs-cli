@@ -12,9 +12,18 @@ namespace Simplic.OxS.CLI.CDN
 
         public void Register(CommandGroupBuilder builder) => builder
             .Module<CdnModule, ICdnSettings>(builder => builder
-                .Depends<OxLoginModule>()
+                .Depends<OxOrganizationModule>()
+            )
+            .Command<CdnMetadataCommand, CdnMetadataCommand.Settings>("metadata", builder => builder
+                .Depends<CdnModule>()
             )
             .Command<CdnUploadCommand, CdnUploadCommand.Settings>("upload", builder => builder
+                .Depends<CdnModule>()
+            )
+            .Command<CdnDownloadCommand, CdnDownloadCommand.Settings>("download", builder => builder
+                .Depends<CdnModule>()
+            )
+            .Command<CdnDeleteCommand, CdnDeleteCommand.Settings>("delete", builder => builder
                 .Depends<CdnModule>()
             );
     }

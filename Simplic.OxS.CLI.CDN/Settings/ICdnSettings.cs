@@ -2,7 +2,7 @@
 
 namespace Simplic.OxS.CLI.CDN.Settings
 {
-    public interface ICdnSettings : IOxSettings
+    public interface ICdnSettings : IOxOrganizationSettings
     {
         public CdnClient? CdnClient { get; set; }
     }
