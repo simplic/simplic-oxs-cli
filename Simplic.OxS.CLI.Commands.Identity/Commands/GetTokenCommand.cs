@@ -1,28 +1,19 @@
-﻿using Simplic.OxS.CLI.Identity.Settings;
+﻿using Simplic.OxS.CLI.Core;
+using Simplic.OxS.CLI.Identity.Settings;
 using Spectre.Console.Cli;
 
 namespace Simplic.OxS.CLI.Identity.Commands
 {
-    public class GetTokenCommand : AsyncCommand<GetTokenCommand.Settings>
+    public class GetTokenCommand : IAsyncCommand<GetTokenCommand.ISettings>
     {
-        public override Task<int> ExecuteAsync(CommandContext context, Settings settings)
+        public Task<int> ExecuteAsync(CommandContext context, ISettings settings)
         {
             Console.WriteLine(settings.AuthClient!.Token);
             return Task.FromResult(0);
         }
 
-        public class Settings : CommandSettings, IOxSettings
+        public interface ISettings : IOxSettings
         {
-            [CommandOption("-u|--uri")]
-            public Uri? Uri { get; init; }
-                
-            [CommandOption("-e|--email")]
-            public string? Email { get; init; }
-
-            [CommandOption("-p|--password")]
-            public string? Password { get; init; }
-
-            public Client? AuthClient { get; set; }
         }
     }
 }

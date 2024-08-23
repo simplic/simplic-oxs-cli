@@ -1,12 +1,14 @@
 ﻿using CommonServiceLocator;
 using Simplic.OxS.CLI.CDN;
 using Simplic.OxS.CLI.Core;
+using Simplic.OxS.CLI.Datahub;
 using Simplic.OxS.CLI.Identity;
 using Simplic.OxS.CLI.Organization;
 using Simplic.OxS.CLI.Studio;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.Globalization;
+using System.Reflection;
 using Unity;
 using Unity.ServiceLocation;
 
@@ -25,16 +27,15 @@ namespace Simplic.OxS.CLI
                 ServiceLocator.SetLocatorProvider(() => locator);
                 Util.InitializeContainer(container);
 
+                container.RegisterInstance(new SettingsGenerator(new AssemblyName("Simplic.OxS.CLI.DynamicSettings")));
+
                 var registry = new CommandRegistry();
                 registry.Add<CdnCommandGroup>();
                 registry.Add<IdentityCommandGroup>();
                 registry.Add<OrganizationCommandGroup>();
                 registry.Add<StudioCommandGroup>();
-                await registry.RunAsync(args, container, config =>
-                {
-                    config.SetExceptionHandler((ex, resolver) => AnsiConsole.WriteException(ex, ExceptionFormats.ShortenEverything));
-                    config.SetApplicationCulture(CultureInfo.InvariantCulture);
-                });
+                //registry.Add<DatahubCommandGroup>();
+                await registry.RunAsync(args, container);
             }
             catch (Exception ex)
             {

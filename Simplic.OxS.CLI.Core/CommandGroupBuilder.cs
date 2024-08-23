@@ -7,13 +7,15 @@ namespace Simplic.OxS.CLI.Core
     {
         private readonly IConfigurator<CommandSettings> configurator;
         private readonly IUnityContainer container;
+        private readonly SettingsGenerator generator;
         private readonly string[] path;
         internal readonly Dictionary<Type, List<Type>> modules = [];
 
-        internal CommandGroupBuilder(IConfigurator<CommandSettings> configurator, IUnityContainer container, string[] path)
+        internal CommandGroupBuilder(IConfigurator<CommandSettings> configurator, IUnityContainer container, SettingsGenerator generator, string[] path)
         {
             this.configurator = configurator;
             this.container = container;
+            this.generator = generator;
             this.path = path;
         }
 
@@ -21,7 +23,7 @@ namespace Simplic.OxS.CLI.Core
         {
             configurator.AddBranch(name, configurator =>
             {
-                var builder = new CommandGroupBuilder(configurator, container, [.. path, name]);
+                var builder = new CommandGroupBuilder(configurator, container, generator, [.. path, name]);
                 action?.Invoke(builder);
                 foreach (var pair in builder.modules)
                     modules.Add(pair.Key, pair.Value);
@@ -38,16 +40,27 @@ namespace Simplic.OxS.CLI.Core
         /// <param name="action"></param>
         /// <returns></returns>
         public CommandGroupBuilder Command<TCommand, TSettings>(string name, Action<CommandBuilder<TSettings>>? action = null)
-            where TCommand : class, ICommandLimiter<TSettings>
-            where TSettings : CommandSettings
+            where TCommand : class, IAsyncCommand<TSettings>
         {
             var builder = new CommandBuilder<TSettings>();
             action?.Invoke(builder);
-            var config = configurator
-                .AddCommand<TCommand>(name)
+
+            Func<CommandContext, TSettings, Task<int>> func = (context, settings) =>
+            {
+                var command = container.Resolve<TCommand>();
+                return command.ExecuteAsync(context, settings);
+            };
+
+            var settings = generator.Generate(typeof(TSettings));
+            var method = configurator.GetType()
+                .GetMethod("AddAsyncDelegate")?
+                .MakeGenericMethod(settings);
+            var config = ((ICommandConfigurator)method!.Invoke(configurator, [name, func])!)
                 .WithData(new CommandData { RequiredModules = builder.modules });
+
             foreach (var example in builder.examples)
                 config.WithExample([.. path, name, .. example]);
+
             return this;
         }
 

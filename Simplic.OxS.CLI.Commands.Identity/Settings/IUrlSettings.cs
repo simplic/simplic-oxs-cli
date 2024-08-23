@@ -1,10 +1,12 @@
 ﻿using Spectre.Console.Cli;
+using System.ComponentModel;
 
 namespace Simplic.OxS.CLI.Identity.Settings
 {
     public interface IUrlSettings
     {
-        [CommandOption("--url")]
-        Uri? Uri { get; init; }
+        [CommandOption("-u|--uri <SERVER>")]
+        [Description("URI of Ox Server instance")]
+        public Uri? Uri { get; init; }
     }
 }

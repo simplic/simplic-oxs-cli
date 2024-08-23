@@ -13,7 +13,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simplic.OxS.CLI.Organizatio
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simplic.OxS.CLI.Studio", "Simplic.OxS.CLI.Studio\Simplic.OxS.CLI.Studio.csproj", "{933D808A-12A7-4AE5-A2E8-3F0AA96B9513}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simplic.OxS.CLI.CDN", "Simplic.OxS.CLI.CDN\Simplic.OxS.CLI.CDN.csproj", "{8F16BDBF-D439-4511-AADF-355DFF31001F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simplic.OxS.CLI.CDN", "Simplic.OxS.CLI.CDN\Simplic.OxS.CLI.CDN.csproj", "{8F16BDBF-D439-4511-AADF-355DFF31001F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simplic.OxS.CLI.Datahub", "Simplic.OxS.CLI.Datahub\Simplic.OxS.CLI.Datahub.csproj", "{4BF0A0CE-5509-4731-B3E1-0EAAB2C6686E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{8F16BDBF-D439-4511-AADF-355DFF31001F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8F16BDBF-D439-4511-AADF-355DFF31001F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8F16BDBF-D439-4511-AADF-355DFF31001F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4BF0A0CE-5509-4731-B3E1-0EAAB2C6686E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4BF0A0CE-5509-4731-B3E1-0EAAB2C6686E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4BF0A0CE-5509-4731-B3E1-0EAAB2C6686E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4BF0A0CE-5509-4731-B3E1-0EAAB2C6686E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

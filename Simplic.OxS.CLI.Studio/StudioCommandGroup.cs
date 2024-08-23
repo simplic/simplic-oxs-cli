@@ -13,10 +13,10 @@ namespace Simplic.OxS.CLI.Studio
         public void Register(CommandGroupBuilder builder) => builder
             .Module<PluginLoaderModule, IPluginLoaderSettings>()
             .Module<StudioLoginModule, IStudioLoginSettings>()
-            .Command<InstallPluginsCommand, InstallPluginsCommand.Settings>("download-plugins", builder => builder
+            .Command<InstallPluginsCommand, InstallPluginsCommand.ISettings>("download-plugins", builder => builder
                 .Depends<StudioLoginModule>()
             )
-            .Command<UploadCommand, UploadCommand.Settings>("upload", builder => builder
+            .Command<UploadCommand, UploadCommand.ISettings>("upload", builder => builder
                 .Depends<OxOrganizationModule>()
                 .Depends<StudioLoginModule>()
                 .Depends<PluginLoaderModule>()

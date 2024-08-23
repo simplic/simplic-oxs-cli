@@ -53,6 +53,7 @@
     <ProjectReference Include="..\Simplic.OxS.CLI.CDN\Simplic.OxS.CLI.CDN.csproj" />
     <ProjectReference Include="..\Simplic.OxS.CLI.Commands.Identity\Simplic.OxS.CLI.Identity.csproj" />
     <ProjectReference Include="..\Simplic.OxS.CLI.Core\Simplic.OxS.CLI.Core.csproj" />
+    <ProjectReference Include="..\Simplic.OxS.CLI.Datahub\Simplic.OxS.CLI.Datahub.csproj" />
     <ProjectReference Include="..\Simplic.OxS.CLI.Organization\Simplic.OxS.CLI.Organization.csproj" />
     <ProjectReference Include="..\Simplic.OxS.CLI.Studio\Simplic.OxS.CLI.Studio.csproj" />
   </ItemGroup>

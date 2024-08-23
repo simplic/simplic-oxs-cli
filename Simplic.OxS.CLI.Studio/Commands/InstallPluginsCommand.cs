@@ -1,20 +1,21 @@
-﻿using Simplic.OxS.CLI.Studio.Settings;
+﻿using Simplic.OxS.CLI.Core;
+using Simplic.OxS.CLI.Studio.Settings;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.ComponentModel;
 
 namespace Simplic.OxS.CLI.Studio.Commands
 {
-    public class InstallPluginsCommand : AsyncCommand<InstallPluginsCommand.Settings>
+    public class InstallPluginsCommand : IAsyncCommand<InstallPluginsCommand.ISettings>
     {
-        public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+        public async Task<int> ExecuteAsync(CommandContext context, ISettings settings)
         {
             var downloadPath = settings.DownloadPath ?? "./.simplic/bin/";
 
             if (Directory.Exists(downloadPath))
                 Directory.Delete(downloadPath, true);
             Directory.CreateDirectory(downloadPath);
-
+            
             return await AnsiConsole.Progress()
                 .Columns(
                     new TaskDescriptionColumn(),
@@ -49,7 +50,7 @@ namespace Simplic.OxS.CLI.Studio.Commands
                     var copyTask = Task.Run(() =>
                     {
                         var paths = new List<string>();
-                        foreach (var dir in settings.AdditionalPaths)
+                        foreach (var dir in settings.AdditionalPaths ?? [])
                             paths.AddRange(Directory.GetFiles(dir, "*.dll"));
 
                         copyProgress.IsIndeterminate = false;
@@ -69,15 +70,11 @@ namespace Simplic.OxS.CLI.Studio.Commands
                 });
         }
 
-        public class Settings : CommandSettings, IStudioLoginSettings
+        public interface ISettings : IStudioLoginSettings
         {
-            [CommandOption("-c|--conn <CONNECTION>")]
-            [Description("Database connection string")]
-            public string? ConnectionString { get; init; }
-
             [CommandOption("-p|--path")]
             [Description("Copy DLLs from this path")]
-            public string[] AdditionalPaths { get; init; } = [];
+            public string[]? AdditionalPaths { get; init; }
 
             [CommandArgument(0, "[DIR]")]
             [Description("Store DLLs to this directory")]

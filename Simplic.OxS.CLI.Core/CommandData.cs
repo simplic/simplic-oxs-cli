@@ -1,6 +1,4 @@
-﻿using Unity;
-
-namespace Simplic.OxS.CLI.Core
+﻿namespace Simplic.OxS.CLI.Core
 {
     internal class CommandData
     {

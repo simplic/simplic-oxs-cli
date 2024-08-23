@@ -17,7 +17,7 @@ namespace Simplic.OxS.CLI.Identity
             .Module<OxOrganizationModule, IOxOrganizationSettings>(builder => builder
                 .Depends<OxLoginModule>()
             )
-            .Command<RegisterCommand, RegisterCommand.Settings>("register", builder => builder
+            .Command<RegisterCommand, RegisterCommand.ISettings>("register", builder => builder
                 .Depends<OxModule>()
                 .Example([
                     "--uri", "https://dev-oxs.simplic.io",
@@ -25,7 +25,7 @@ namespace Simplic.OxS.CLI.Identity
                     "--password", "password1234",
                 ])
             )
-            .Command<GetTokenCommand, GetTokenCommand.Settings>("get-token", builder => builder
+            .Command<GetTokenCommand, GetTokenCommand.ISettings>("get-token", builder => builder
                 .Depends<OxLoginModule>()
                 .Example([
                     "--uri", "https://dev-oxs.simplic.io",
@@ -33,7 +33,7 @@ namespace Simplic.OxS.CLI.Identity
                     "--password", "password1234",
                 ])
             )
-            .Command<ChangePasswordCommand, ChangePasswordCommand.Settings>("change-password", builder => builder
+            .Command<ChangePasswordCommand, ChangePasswordCommand.ISettings>("change-password", builder => builder
                 .Depends<OxLoginModule>()
                 .Example([
                     "--uri", "https://dev-oxs.simplic.io",
@@ -42,7 +42,7 @@ namespace Simplic.OxS.CLI.Identity
                     "new-password5678",
                 ])
             )
-            .Command<ResetPasswordCommand, ResetPasswordCommand.Settings>("reset-password", builder => builder
+            .Command<ResetPasswordCommand, ResetPasswordCommand.ISettings>("reset-password", builder => builder
                 .Example([
                     "--uri", "https://dev-oxs.simplic.io",
                     "--email", "user@simplic.biz",

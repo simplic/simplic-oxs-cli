@@ -9,7 +9,7 @@ namespace Simplic.OxS.CLI.Organization
         public string Name => "organization";
 
         public void Register(CommandGroupBuilder builder) => builder
-            .Command<CreateOrganizationCommand, CreateOrganizationCommand.Settings>("create", builder => builder
+            .Command<CreateOrganizationCommand, CreateOrganizationCommand.ISettings>("create", builder => builder
                 .Depends<OxLoginModule>()
                 .Example([
                     "--uri", "https://dev-oxs.simplic.io",
@@ -18,7 +18,7 @@ namespace Simplic.OxS.CLI.Organization
                     "MyCoolOrganization",
                 ])
             )
-            .Command<DeleteOrganizationCommand, DeleteOrganizationCommand.Settings>("delete", builder => builder
+            .Command<DeleteOrganizationCommand, DeleteOrganizationCommand.ISettings>("delete", builder => builder
                 .Depends<OxLoginModule>()
                 .Example([
                     "--uri", "https://dev-oxs.simplic.io",
@@ -27,7 +27,7 @@ namespace Simplic.OxS.CLI.Organization
                     "01234567-89ab-cdef-0123-456789abcdef"
                 ])
             )
-            .Command<ListOrganizationsCommand, ListOrganizationsCommand.Settings>("list", builder => builder
+            .Command<ListOrganizationsCommand, ListOrganizationsCommand.ISettings>("list", builder => builder
                 .Depends<OxLoginModule>()
                 .Example([
                     "--uri", "https://dev-oxs.simplic.io",

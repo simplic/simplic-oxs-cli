@@ -1,13 +1,13 @@
-﻿using Simplic.OxS.CLI.Identity;
+﻿using Simplic.OxS.CLI.Core;
 using Simplic.OxS.CLI.Identity.Settings;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace Simplic.OxS.CLI.Organization.Commands
 {
-    internal class ListOrganizationsCommand : AsyncCommand<ListOrganizationsCommand.Settings>
+    public class ListOrganizationsCommand : IAsyncCommand<ListOrganizationsCommand.ISettings>
     {
-        public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+        public async Task<int> ExecuteAsync(CommandContext context, ISettings settings)
         {
             var client = new OrganizationClient(settings.AuthClient!.HttpClient);
             var organizations = await AnsiConsole.Status()
@@ -20,18 +20,8 @@ namespace Simplic.OxS.CLI.Organization.Commands
             return 0;
         }
 
-        public class Settings : CommandSettings, IOxSettings
+        public interface ISettings : IOxSettings
         {
-            [CommandOption("-u|--uri <SERVER>")]
-            public Uri? Uri { get; init; }
-
-            [CommandOption("-e|--email <EMAIL>")]
-            public string? Email { get; init; }
-
-            [CommandOption("-p|--password <PASSWORD>")]
-            public string? Password { get; init; }
-
-            public Client? AuthClient { get; set; }
         }
     }
 }

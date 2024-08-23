@@ -1,12 +1,13 @@
-﻿using Simplic.OxS.CLI.Identity.Settings;
+﻿using Simplic.OxS.CLI.Core;
+using Simplic.OxS.CLI.Identity.Settings;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace Simplic.OxS.CLI.Identity.Commands
 {
-    internal class ChangePasswordCommand : AsyncCommand<ChangePasswordCommand.Settings>
+    public class ChangePasswordCommand : IAsyncCommand<ChangePasswordCommand.ISettings>
     {
-        public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+        public async Task<int> ExecuteAsync(CommandContext context, ISettings settings)
         {
             var password = settings.NewPassword ?? Interactive.EnterNewPassword();
 
@@ -16,19 +17,8 @@ namespace Simplic.OxS.CLI.Identity.Commands
             return 0;
         }
 
-        public class Settings : CommandSettings, IOxSettings
+        public interface ISettings : IOxSettings
         {
-            [CommandOption("-u|--uri")]
-            public Uri? Uri { get; init; }
-
-            [CommandOption("-e|--email")]
-            public string? Email { get; init; }
-
-            [CommandOption("-p|--password")]
-            public string? Password { get; init; }
-
-            public Client? AuthClient { get; set; }
-
             [CommandArgument(0, "[PASSWORD]")]
             public string? NewPassword { get; init; }
         }

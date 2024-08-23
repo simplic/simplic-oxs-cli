@@ -1,12 +1,14 @@
-﻿using Simplic.Studio.Ox.Service;
+﻿using Simplic.OxS.CLI.Core;
+using Simplic.OxS.CLI.Identity.Settings;
+using Simplic.Studio.Ox.Service;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace Simplic.OxS.CLI.Identity.Commands
 {
-    internal class ResetPasswordCommand : AsyncCommand<ResetPasswordCommand.Settings>
+    public class ResetPasswordCommand : IAsyncCommand<ResetPasswordCommand.ISettings>
     {
-        public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+        public async Task<int> ExecuteAsync(CommandContext context, ISettings settings)
         {
             var uri = settings.Uri ?? Interactive.EnterUri();
             var email = settings.Email ?? Interactive.EnterEmail();
@@ -20,11 +22,8 @@ namespace Simplic.OxS.CLI.Identity.Commands
             return 0;
         }
 
-        public class Settings : CommandSettings
+        public interface ISettings : IUrlSettings
         {
-            [CommandOption("-u|--uri")]
-            public Uri? Uri { get; init; }
-
             [CommandOption("-e|--email")]
             public string? Email { get; init; }
 

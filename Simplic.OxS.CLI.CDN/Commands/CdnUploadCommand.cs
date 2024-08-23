@@ -1,16 +1,15 @@
 ﻿using MimeMapping;
 using Simplic.OxS.CLI.CDN.Settings;
 using Simplic.OxS.CLI.Core;
-using Simplic.OxS.CLI.Identity;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.ComponentModel;
 
 namespace Simplic.OxS.CLI.CDN.Commands
 {
-    internal class CdnUploadCommand : AsyncCommand<CdnUploadCommand.Settings>
+    public class CdnUploadCommand : IAsyncCommand<CdnUploadCommand.ISettings>
     {
-        public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+        public async Task<int> ExecuteAsync(CommandContext context, ISettings settings)
         {
             var files = new List<FileParameter>();
             var client = new CdnClient(settings.AuthClient!.HttpClient);
@@ -77,31 +76,11 @@ namespace Simplic.OxS.CLI.CDN.Commands
             }
         }
 
-        internal class Settings : CommandSettings, ICdnSettings
+        public interface ISettings : ICdnSettings
         {
-            [CommandOption("-u|--uri <SERVER>")]
-            [Description("URI of Ox Server instance")]
-            public Uri? Uri { get; init; }
-
-            [CommandOption("-e|--email <EMAIL>")]
-            [Description("Ox user account email")]
-            public string? Email { get; init; }
-
-            [CommandOption("-p|--password <PASSWORD>")]
-            [Description("Ox user account password")]
-            public string? Password { get; init; }
-
-            [CommandOption("-o|--organization <UUID>")]
-            [Description("Ox organization id")]
-            public Guid? OrganizationId { get; init; }
-
             [CommandArgument(0, "[files]")]
             [Description("Files to upload")]
-            public required string[] Files { get; init; }
-
-            public Client? AuthClient { get; set; }
-
-            public CdnClient? CdnClient { get; set; }
+            public string[] Files { get; init; }
         }
     }
 }
