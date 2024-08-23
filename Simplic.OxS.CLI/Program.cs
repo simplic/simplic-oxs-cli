@@ -34,7 +34,7 @@ namespace Simplic.OxS.CLI
                 registry.Add<IdentityCommandGroup>();
                 registry.Add<OrganizationCommandGroup>();
                 registry.Add<StudioCommandGroup>();
-                //registry.Add<DatahubCommandGroup>();
+                registry.Add<DatahubCommandGroup>();
                 await registry.RunAsync(args, container);
             }
             catch (Exception ex)

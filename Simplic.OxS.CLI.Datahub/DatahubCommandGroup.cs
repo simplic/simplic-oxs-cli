@@ -1,4 +1,5 @@
 ﻿using Simplic.OxS.CLI.Core;
+using Simplic.OxS.CLI.Datahub.Commands;
 
 namespace Simplic.OxS.CLI.Datahub
 {
@@ -6,8 +7,7 @@ namespace Simplic.OxS.CLI.Datahub
     {
         public string Name => "datahub";
 
-        public void Register(CommandGroupBuilder builder)
-        {
-        }
+        public void Register(CommandGroupBuilder builder) => builder
+            .Command<DatahubUserCreateCommand, DatahubUserCreateCommand.ISettings>("create");
     }
 }
