@@ -10,7 +10,10 @@ namespace Simplic.OxS.CLI.Identity
         public string Name => "identity";
 
         public void Register(CommandGroupBuilder builder) => builder
-            .Module<OxModule, IOxSettings>()
+            .Module<OxUrlModule, IOxUrlSettings>()
+            .Module<OxModule, IOxSettings>(builder => builder
+                .Depends<OxUrlModule>()
+            )
             .Module<OxLoginModule, IOxSettings>(builder => builder
                 .Depends<OxModule>()
             )

@@ -12,7 +12,7 @@ namespace Simplic.OxS.CLI.Organization.Commands
         {
             var id = settings.OrganizationId ?? Interactive.EnterOrganizationId();
 
-            var client = new OrganizationClient(settings.AuthClient!.HttpClient);
+            var client = new OrganizationClient(settings.HttpClient);
 
             await AnsiConsole.Status()
                 .Spinner(Spinner.Known.Flip)

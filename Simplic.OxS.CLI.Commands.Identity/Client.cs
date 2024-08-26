@@ -1,7 +1,4 @@
-﻿using CommonServiceLocator;
-using Simplic.Studio.Ox;
-using Simplic.Studio.Ox.Service;
-using Spectre.Console;
+﻿using Simplic.Studio.Ox.Service;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 
@@ -10,36 +7,17 @@ namespace Simplic.OxS.CLI.Identity
     /// <summary>
     /// Ox client containing various methods required by the CLI
     /// </summary>
-    public class Client : IDisposable
+    /// <remarks>
+    /// Create new client without authorizing
+    /// </remarks>
+    /// <param name="uri"></param>
+    /// <param name="email"></param>
+    /// <param name="password"></param>
+    public class Client(HttpClient httpClient, string email, string password) : IDisposable
     {
-        private readonly ISharedIdRepository sharedIdRepository;
-        private readonly IEnumerable<IInstanceDataUploadService> instanceDataUploadServices;
-
-        private readonly HttpClient httpClient;
-        private readonly AuthClient authClient;
+        private readonly AuthClient authClient = new(httpClient);
         private readonly JwtSecurityTokenHandler handler = new();
-
-        private readonly string email;
-        private readonly string password;
-
         private bool disposed = false;
-
-        /// <summary>
-        /// Create new client without authorizing
-        /// </summary>
-        /// <param name="uri"></param>
-        /// <param name="email"></param>
-        /// <param name="password"></param>
-        public Client(Uri uri, string email, string password)
-        {
-            this.email = email;
-            this.password = password;
-            httpClient = new() { BaseAddress = uri };
-            authClient = new(httpClient);
-
-            sharedIdRepository = ServiceLocator.Current.GetInstance<ISharedIdRepository>();
-            instanceDataUploadServices = ServiceLocator.Current.GetInstance<IEnumerable<IInstanceDataUploadService>>();
-        }
 
         /// <summary>
         /// Create an account using the stored credentials

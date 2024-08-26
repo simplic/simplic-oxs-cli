@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MimeMapping" Version="3.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Simplic.OxS.CLI.Commands.Identity\Simplic.OxS.CLI.Identity.csproj" />
     <ProjectReference Include="..\Simplic.OxS.CLI.Core\Simplic.OxS.CLI.Core.csproj" />
   </ItemGroup>

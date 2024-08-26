@@ -7,7 +7,7 @@ namespace Simplic.OxS.CLI.CDN.Modules
     {
         public Task Execute(ICdnSettings settings)
         {
-            settings.CdnClient = new CdnClient(settings.AuthClient!.HttpClient);
+            settings.CdnClient = new CdnClient(settings.HttpClient);
             return Task.CompletedTask;
         }
     }

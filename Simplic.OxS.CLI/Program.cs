@@ -6,8 +6,6 @@ using Simplic.OxS.CLI.Identity;
 using Simplic.OxS.CLI.Organization;
 using Simplic.OxS.CLI.Studio;
 using Spectre.Console;
-using Spectre.Console.Cli;
-using System.Globalization;
 using System.Reflection;
 using Unity;
 using Unity.ServiceLocation;

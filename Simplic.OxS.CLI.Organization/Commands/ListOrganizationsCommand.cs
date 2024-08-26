@@ -9,7 +9,7 @@ namespace Simplic.OxS.CLI.Organization.Commands
     {
         public async Task<int> ExecuteAsync(CommandContext context, ISettings settings)
         {
-            var client = new OrganizationClient(settings.AuthClient!.HttpClient);
+            var client = new OrganizationClient(settings.HttpClient);
             var organizations = await AnsiConsole.Status()
                 .Spinner(Spinner.Known.Flip)
                 .StartAsync("[olive]Listing organizations[/]", _ => client.GetForUserAsync());

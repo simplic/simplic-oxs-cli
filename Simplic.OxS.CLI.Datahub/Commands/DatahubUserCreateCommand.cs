@@ -1,6 +1,8 @@
 ﻿using Simplic.OxS.CLI.Core;
 using Simplic.OxS.CLI.Identity.Settings;
+using Spectre.Console;
 using Spectre.Console.Cli;
+using System.ComponentModel;
 
 namespace Simplic.OxS.CLI.Datahub.Commands
 {
@@ -8,11 +10,10 @@ namespace Simplic.OxS.CLI.Datahub.Commands
     {
         public async Task<int> ExecuteAsync(CommandContext context, ISettings settings)
         {
-            var username = settings.Username ?? Interactive.EnterUsername();
-            var password = settings.Password ?? Interactive.EnterPassword();
+            var username = settings.DatahubUsername ?? Interactive.EnterUsername();
+            var password = settings.DatahubPassword ?? Interactive.EnterPassword();
 
-            using var httpClient = new HttpClient { BaseAddress = settings.Uri };
-            var client = new DatahubClient(httpClient);
+            var client = new DatahubClient(settings.HttpClient);
             var response = await client.UserPOSTAsync(new CreateUserRequest
             {
                 Name = username,
@@ -20,18 +21,23 @@ namespace Simplic.OxS.CLI.Datahub.Commands
                 IsActive = true,
             });
 
-            Console.WriteLine(response.ApiKey);
+            AnsiConsole.MarkupLine("[green]User created[/]");
+            AnsiConsole.MarkupLineInterpolated($"Username: [yellow]{response.Name}[/]");
+            AnsiConsole.MarkupLineInterpolated($"User-ID : [gray]{response.Id}[/]");
+            AnsiConsole.MarkupLineInterpolated($"API Key : [gray]{response.ApiKey}[/]");
 
             return 0;
         }
 
-        public interface ISettings : IUrlSettings
+        public interface ISettings : IOxSettings
         {
-            [CommandOption("-n|--username")]
-            string? Username { get; set; }
+            [CommandArgument(0, "[USERNAME]")]
+            [Description("Username for datahub")]
+            string? DatahubUsername { get; set; }
 
-            [CommandOption("-p|--password")]
-            string? Password { get; set; }
+            [CommandArgument(1, "[PASSWORD]")]
+            [Description("Password for datahub")]
+            string? DatahubPassword { get; set; }
         }
     }
 }

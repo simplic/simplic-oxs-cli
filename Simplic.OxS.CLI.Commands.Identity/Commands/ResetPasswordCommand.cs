@@ -22,7 +22,7 @@ namespace Simplic.OxS.CLI.Identity.Commands
             return 0;
         }
 
-        public interface ISettings : IUrlSettings
+        public interface ISettings : IOxUrlSettings
         {
             [CommandOption("-e|--email")]
             public string? Email { get; init; }

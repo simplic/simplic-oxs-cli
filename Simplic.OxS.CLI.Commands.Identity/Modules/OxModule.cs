@@ -13,11 +13,10 @@ namespace Simplic.OxS.CLI.Identity.Modules
 
             new FrameworkEntryPoint().Initilize();
 
-            var uri = settings.Uri ?? Interactive.EnterUri();
             var email = settings.Email ?? Interactive.EnterEmail();
             var password = settings.Password ?? Interactive.EnterPassword();
 
-            var client = new Client(uri, email, password);
+            var client = new Client(settings.HttpClient!, email, password);
             settings.AuthClient = client;
 
             return Task.CompletedTask;

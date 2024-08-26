@@ -3,7 +3,7 @@ using System.ComponentModel;
 
 namespace Simplic.OxS.CLI.Identity.Settings
 {
-    public interface IOxSettings : IUrlSettings
+    public interface IOxSettings : IOxUrlSettings
     {
         [CommandOption("-e|--email <EMAIL>")]
         [Description("Ox user account email")]

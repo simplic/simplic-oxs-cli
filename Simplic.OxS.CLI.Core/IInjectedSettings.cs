@@ -8,7 +8,7 @@ namespace Simplic.OxS.CLI.Core
     /// </summary>
     public interface IInjectedSettings
     {
-        [CommandOption("-P|--profile <NAME>")]
+        [CommandOption("-X|--profile <NAME>")]
         [Description("Use a profile to fill out some arguments")]
         public string[]? Profiles { get; init; }
 

@@ -12,7 +12,7 @@ namespace Simplic.OxS.CLI.CDN.Commands
         public async Task<int> ExecuteAsync(CommandContext context, ISettings settings)
         {
             var files = new List<FileParameter>();
-            var client = new CdnClient(settings.AuthClient!.HttpClient);
+            var client = new CdnClient(settings.HttpClient);
             var token = new CancellationTokenSource();
             try
             {

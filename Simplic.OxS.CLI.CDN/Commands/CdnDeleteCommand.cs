@@ -10,7 +10,7 @@ namespace Simplic.OxS.CLI.CDN.Commands
     {
         public async Task<int> ExecuteAsync(CommandContext context, ISettings settings)
         {
-            var client = new CdnClient(settings.AuthClient!.HttpClient);
+            var client = new CdnClient(settings.HttpClient);
 
             var metadatas = await Interactive.RetrieveMetadata(client, settings.BlobIds);
             Interactive.ShowMetadata(metadatas);

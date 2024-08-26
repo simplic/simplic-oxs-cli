@@ -491,7 +491,7 @@ namespace Simplic.OxS.CLI.Datahub
 
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task EnqueueFileAsync(System.Guid definitionId, string apiKey, FileParameter file)
+        public virtual System.Threading.Tasks.Task<QueueItem> EnqueueFileAsync(System.Guid definitionId, string apiKey, FileParameter file)
         {
             return EnqueueFileAsync(definitionId, apiKey, file, System.Threading.CancellationToken.None);
         }
@@ -499,7 +499,7 @@ namespace Simplic.OxS.CLI.Datahub
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task EnqueueFileAsync(System.Guid definitionId, string apiKey, FileParameter file, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<QueueItem> EnqueueFileAsync(System.Guid definitionId, string apiKey, FileParameter file, System.Threading.CancellationToken cancellationToken)
         {
             if (definitionId == null)
                 throw new System.ArgumentNullException("definitionId");
@@ -564,7 +564,12 @@ namespace Simplic.OxS.CLI.Datahub
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            return;
+                            var objectResponse_ = await ReadObjectResponseAsync<QueueItem>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
                         }
                         else
                         if (status_ == 400)
@@ -1809,12 +1814,7 @@ namespace Simplic.OxS.CLI.Datahub
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<string>(response_, headers_, cancellationToken).ConfigureAwait(false);
-                            if (objectResponse_.Object == null)
-                            {
-                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
-                            }
-                            return objectResponse_.Object;
+                            return await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
                         }
                         else
                         if (status_ == 400)
@@ -2310,6 +2310,47 @@ namespace Simplic.OxS.CLI.Datahub
 
     }
 
+    public partial class QueueItem
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public Guid Id { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("organizationId")]
+        public Guid OrganizationId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("definition")]
+        public QueueDefinitionTupel Definition { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("path")]
+        public string Path { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public string State { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("createDateTime")]
+        public System.DateTimeOffset CreateDateTime { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("createUserId")]
+        public System.Guid? CreateUserId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("createUserName")]
+        public string CreateUserName { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("updateDateTime")]
+        public System.DateTimeOffset UpdateDateTime { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("updateUserId")]
+        public System.Guid? UpdateUserId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("updateUserName")]
+        public string UpdateUserName { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("isDeleted")]
+        public bool IsDeleted { get; set; }
+
+    }
+
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class SftpSettingsModel
     {
@@ -2365,17 +2406,11 @@ namespace Simplic.OxS.CLI.Datahub
         [System.Text.Json.Serialization.JsonPropertyName("isDeleted")]
         public bool IsDeleted { get; set; }
 
-        [System.Text.Json.Serialization.JsonPropertyName("createDateTime")]
-        public System.DateTimeOffset CreateDateTime { get; set; }
-
         [System.Text.Json.Serialization.JsonPropertyName("createUserId")]
         public System.Guid? CreateUserId { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("createUserName")]
         public string CreateUserName { get; set; }
-
-        [System.Text.Json.Serialization.JsonPropertyName("updateDateTime")]
-        public System.DateTimeOffset UpdateDateTime { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("updateUserId")]
         public System.Guid? UpdateUserId { get; set; }
