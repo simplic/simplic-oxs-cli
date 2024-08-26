@@ -3,11 +3,11 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <RootNamespace>Simplic.Ox.CLI</RootNamespace>
+    <RootNamespace>Simplic.OxS.CLI</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 	<UseWPF>true</UseWPF>
-	<AssemblyName>simplic-ox-cli</AssemblyName>
+	<AssemblyName>simplic-oxs-cli</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

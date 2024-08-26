@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Simplic.Ox.CLI": {
-      "commandName": "Project",
-      "commandLineArgs": "interactive -u https://dev-oxs.simplic.io/ -e mattis.bergmann@simplic.biz -D C:\\Users\\m.bergmann\\source\\repos\\simplic-framework\\src\\Simplic.Main\\bin\\Debug -D ./simplic/bin"
-    }
-  }
-}
