@@ -3,7 +3,6 @@ using Simplic.OxS.CLI.Identity.Settings;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.ComponentModel;
-using System.Text.Json;
 
 namespace Simplic.OxS.CLI.Datahub.Commands
 {

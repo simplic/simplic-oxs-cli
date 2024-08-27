@@ -6,6 +6,7 @@ using Simplic.OxS.CLI.Identity;
 using Simplic.OxS.CLI.Organization;
 using Simplic.OxS.CLI.Studio;
 using Spectre.Console;
+using System.IO;
 using System.Reflection;
 using Unity;
 using Unity.ServiceLocation;
@@ -25,6 +26,9 @@ namespace Simplic.OxS.CLI
                 ServiceLocator.SetLocatorProvider(() => locator);
                 Util.InitializeContainer(container);
 
+                var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                var profilePath = Path.Combine(userProfile, ".simplic", "simplic-oxs-cli", "profiles");
+                container.RegisterInstance(new ProfileManager(profilePath));
                 container.RegisterInstance(new SettingsGenerator(new AssemblyName("Simplic.OxS.CLI.DynamicSettings")));
 
                 var registry = new CommandRegistry();
@@ -33,6 +37,7 @@ namespace Simplic.OxS.CLI
                 registry.Add<OrganizationCommandGroup>();
                 registry.Add<StudioCommandGroup>();
                 registry.Add<DatahubCommandGroup>();
+                registry.Add<ProfileCommandGroup>();
                 await registry.RunAsync(args, container);
             }
             catch (Exception ex)

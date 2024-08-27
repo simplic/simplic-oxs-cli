@@ -1,15 +1,13 @@
 ﻿using Spectre.Console;
 using Spectre.Console.Cli;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
+using System.Diagnostics;
 using Unity;
 
 namespace Simplic.OxS.CLI.Core
 {
     internal class CommandInterceptor(IUnityContainer container, Dictionary<Type, List<Type>> modules) : ICommandInterceptor
     {
-        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions { WriteIndented = true };
+        private readonly ProfileManager profileManager = container.Resolve<ProfileManager>();
 
         /// <summary>
         /// Execute all modules required by the command
@@ -19,8 +17,11 @@ namespace Simplic.OxS.CLI.Core
         void ICommandInterceptor.Intercept(CommandContext context, CommandSettings settings)
         {
             var injectedSettings = (IInjectedSettings)settings;
-            var profiles = injectedSettings.Profiles;
-            foreach (var profile in profiles ?? [])
+            var profiles = injectedSettings.Profiles ?? [];
+            var defaultProfile = profileManager.GetDefaultProfile();
+            if (defaultProfile != null)
+                profiles = [defaultProfile, .. profiles];
+            foreach (var profile in profiles)
                 ApplyProfile(profile, settings);
 
             if (injectedSettings.AddProfile != null)
@@ -49,102 +50,37 @@ namespace Simplic.OxS.CLI.Core
             task.GetAwaiter().GetResult();
         }
 
-        private static void ApplyProfile(string name, CommandSettings settings)
+        private void ApplyProfile(string name, CommandSettings settings)
         {
-            Dictionary<string, JsonObject>? profile;
-            try
-            {
-                using var file = File.OpenRead(GetProfilePath(name));
-                profile = JsonSerializer.Deserialize<Dictionary<string, JsonObject>>(file) ?? [];
-            }
-            catch (FileNotFoundException)
+            var profile = profileManager.Load(name);
+            if (profile == null)
             {
                 AnsiConsole.MarkupLineInterpolated($"[red]Profile [yellow]{name}[/] does not exist[/]");
                 throw new CancelCommandException();
             }
 
-            var interfaces = settings.GetType().GetInterfaces();
-            foreach (var type in interfaces)
-            {
-                if (!profile.TryGetValue(type.FullName ?? "?Unknown", out var value))
-                    continue;
-                foreach (var pair in value)
-                {
-                    var property = type.GetProperty(pair.Key);
-                    if (property == null)
-                        continue;
-
-                    var setting = JsonSerializer.Deserialize(pair.Value, property.PropertyType);
-                    property.SetValue(settings, setting);
-                }
-            }
+            profile.Apply(settings);
+            AnsiConsole.MarkupLineInterpolated($"[gray]Profile [yellow]{name}[/] applied[/]");
         }
 
-        private static void StoreProfile(string name, CommandSettings settings, bool add)
+        private void StoreProfile(string name, CommandSettings settings, bool add)
         {
-            Dictionary<string, JsonObject>? profile = null;
-            var path = GetProfilePath(name);
-            var added = false;
-            if (add && File.Exists(path))
-            {
-                using var fileRead = File.OpenRead(path);
-                profile = JsonSerializer.Deserialize<Dictionary<string, JsonObject>>(fileRead);
-                added = true;
-            }
-            profile ??= [];
+            Profile? profile = null;
+            if (add)
+                profile = profileManager.Load(name);
+            var added = profile != null;
+            profile ??= new();
 
-            var interfaces = settings.GetType().GetInterfaces();
-            foreach (var type in interfaces)
-            {
-                // Do not save profile settings
-                if (type == typeof(IInjectedSettings))
-                    continue;
-
-                var typeName = type.FullName ?? "?Unknown";
-                if (!profile.TryGetValue(typeName, out var value))
-                {
-                    value = [];
-                    profile.Add(typeName, value);
-                }
-
-                foreach (var property in type.GetProperties())
-                {
-                    var isArgument = property.GetCustomAttributes(false)
-                        .Any(a => a.GetType() == typeof(CommandArgumentAttribute)
-                               || a.GetType() == typeof(CommandOptionAttribute));
-                    if (!isArgument)
-                        continue;
-
-                    var setting = property.GetValue(settings);
-                    if (setting != null)
-                        value[property.Name] = JsonSerializer.SerializeToNode(setting);
-                }
-            }
-
-            using var fileWrite = File.Create(path);
-            JsonSerializer.Serialize(fileWrite, profile, JsonOptions);
+            profile.Add(settings);
+            profileManager.Save(name, profile);
 
             if (added)
-                AnsiConsole.MarkupLineInterpolated($"[red]Added to profile [yellow]{name}[/][/]");
+                AnsiConsole.MarkupLineInterpolated($"[green]Added to profile [yellow]{name}[/][/]");
             else
-                AnsiConsole.MarkupLineInterpolated($"[red]Profile [yellow]{name}[/] written[/]");
+                AnsiConsole.MarkupLineInterpolated($"[green]Profile [yellow]{name}[/] written[/]");
 
+            // Don't execute the command when writing a profile
             throw new CancelCommandException();
-        }
-
-        private static string GetProfilePath(string name)
-        {
-            var userData = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-
-            // https://stackoverflow.com/a/847251
-            var invalid = Regex.Escape(new string(Path.GetInvalidFileNameChars()));
-            var regex = string.Format(@"([{0}]*\.+$)|([{0}]+)", invalid);
-            var newName = Regex.Replace(name, regex, "_") + ".json";
-
-            var directory = Path.Join(userData, ".simplic", "simplic-oxs-cli", "profiles");
-            Directory.CreateDirectory(directory);
-
-            return Path.Join(directory, newName);
         }
     }
 }
