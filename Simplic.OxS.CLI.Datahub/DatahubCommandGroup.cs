@@ -22,6 +22,9 @@ namespace Simplic.OxS.CLI.Datahub
             )
             .Command<DatahubDequeueCommand, DatahubDequeueCommand.ISettings>("dequeue", builder => builder
                     .Depends<OxLoginModule>()
+            )
+            .Command<DatahubDequeueAllCommand, DatahubDequeueAllCommand.ISettings>("dequeue-all", builder => builder
+                    .Depends<OxLoginModule>()
             );
     }
 }
