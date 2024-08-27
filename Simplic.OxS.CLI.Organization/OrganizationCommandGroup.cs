@@ -9,7 +9,7 @@ namespace Simplic.OxS.CLI.Organization
         public string Name => "organization";
 
         public void Register(CommandGroupBuilder builder) => builder
-            .Command<CreateOrganizationCommand, CreateOrganizationCommand.ISettings>("create", builder => builder
+            .Command<OrganizationCreateCommand, OrganizationCreateCommand.ISettings>("create", builder => builder
                 .Depends<OxLoginModule>()
                 .Example([
                     "--uri", "https://dev-oxs.simplic.io",
@@ -18,7 +18,7 @@ namespace Simplic.OxS.CLI.Organization
                     "MyCoolOrganization",
                 ])
             )
-            .Command<DeleteOrganizationCommand, DeleteOrganizationCommand.ISettings>("delete", builder => builder
+            .Command<OrganizationDeleteCommand, OrganizationDeleteCommand.ISettings>("delete", builder => builder
                 .Depends<OxLoginModule>()
                 .Example([
                     "--uri", "https://dev-oxs.simplic.io",
@@ -27,12 +27,21 @@ namespace Simplic.OxS.CLI.Organization
                     "01234567-89ab-cdef-0123-456789abcdef"
                 ])
             )
-            .Command<ListOrganizationsCommand, ListOrganizationsCommand.ISettings>("list", builder => builder
+            .Command<OrganizationListCommand, OrganizationListCommand.ISettings>("list", builder => builder
                 .Depends<OxLoginModule>()
                 .Example([
                     "--uri", "https://dev-oxs.simplic.io",
                     "--email", "user@simplic.biz",
                     "--password", "password",
+                ])
+            )
+            .Command<OrganizationGetTokenCommand, OrganizationGetTokenCommand.ISettings>("get-token", builder => builder
+                .Depends<OxOrganizationModule>()
+                .Example([
+                    "--uri", "https://dev-oxs.simplic.io",
+                    "--email", "user@simplic.biz",
+                    "--password", "password",
+                    "--organization", "01234567-89ab-cdef-0123-456789abcdef"
                 ])
             );
     }

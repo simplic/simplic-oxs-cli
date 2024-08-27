@@ -6,7 +6,7 @@ using Spectre.Console.Cli;
 
 namespace Simplic.OxS.CLI.Organization.Commands
 {
-    public class CreateOrganizationCommand : IAsyncCommand<CreateOrganizationCommand.ISettings>
+    public class OrganizationCreateCommand : IAsyncCommand<OrganizationCreateCommand.ISettings>
     {
         public async Task<int> ExecuteAsync(CommandContext context, ISettings settings)
         {

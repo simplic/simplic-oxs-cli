@@ -5,7 +5,7 @@ using Spectre.Console.Cli;
 
 namespace Simplic.OxS.CLI.Organization.Commands
 {
-    public class ListOrganizationsCommand : IAsyncCommand<ListOrganizationsCommand.ISettings>
+    public class OrganizationListCommand : IAsyncCommand<OrganizationListCommand.ISettings>
     {
         public async Task<int> ExecuteAsync(CommandContext context, ISettings settings)
         {

@@ -2,9 +2,9 @@
 using Simplic.OxS.CLI.Identity.Settings;
 using Spectre.Console.Cli;
 
-namespace Simplic.OxS.CLI.Identity.Commands
+namespace Simplic.OxS.CLI.Organization.Commands
 {
-    public class GetTokenCommand : IAsyncCommand<GetTokenCommand.ISettings>
+    public class OrganizationGetTokenCommand : IAsyncCommand<OrganizationGetTokenCommand.ISettings>
     {
         public Task<int> ExecuteAsync(CommandContext context, ISettings settings)
         {
