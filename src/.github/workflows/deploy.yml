@@ -1,0 +1,378 @@
+name: Deploy OXS CLI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  PROJECT_PATH: 'simplic-oxs-cli/oxs.csproj'
+  OUTPUT_NAME: 'oxs'
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: ./src
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Get version from project
+      id: version
+      run: |
+        # Extract version from csproj or use timestamp-based version
+        if grep -q "<Version>" ${{ env.PROJECT_PATH }}; then
+          VERSION=$(grep "<Version>" ${{ env.PROJECT_PATH }} | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/')
+        else
+          # Generate version from commit date and short SHA
+          VERSION="1.0.$(date +'%Y%m%d').$(git rev-parse --short HEAD)"
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+
+    - name: Build project
+      run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
+
+    - name: Publish Windows x64
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} \
+          --configuration Release \
+          --runtime win-x64 \
+          --self-contained true \
+          --output ./publish/win-x64 \
+          -p:PublishSingleFile=true \
+          -p:Version=${{ steps.version.outputs.VERSION }}
+
+    - name: Publish Linux x64
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} \
+          --configuration Release \
+          --runtime linux-x64 \
+          --self-contained true \
+          --output ./publish/linux-x64 \
+          -p:PublishSingleFile=true \
+          -p:Version=${{ steps.version.outputs.VERSION }}
+
+    - name: Create Windows installer script
+      run: |
+        mkdir -p ./publish/windows-installer
+        cat > ./publish/windows-installer/install.ps1 << 'EOF'
+        # OXS CLI Windows Installer
+        param(
+            [string]$InstallPath = "$env:LOCALAPPDATA\Programs\OXS-CLI"
+        )
+
+        Write-Host "Installing OXS CLI..." -ForegroundColor Green
+
+        # Create installation directory
+        if (!(Test-Path $InstallPath)) {
+            New-Item -ItemType Directory -Path $InstallPath -Force | Out-Null
+        }
+
+        # Copy executable
+        $exePath = Join-Path $InstallPath "oxs.exe"
+        Copy-Item "oxs.exe" $exePath -Force
+
+        # Add to PATH if not already present
+        $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+        if ($currentPath -notlike "*$InstallPath*") {
+            $newPath = if ($currentPath) { "$currentPath;$InstallPath" } else { $InstallPath }
+            [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
+            Write-Host "Added $InstallPath to user PATH" -ForegroundColor Green
+        }
+
+        # Create uninstaller
+        $uninstallerPath = Join-Path $InstallPath "uninstall.ps1"
+        @"
+        # OXS CLI Uninstaller
+        Write-Host "Uninstalling OXS CLI..." -ForegroundColor Yellow
+        Remove-Item "$InstallPath" -Recurse -Force -ErrorAction SilentlyContinue
+        
+        # Remove from PATH
+        `$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+        `$newPath = (`$currentPath -split ";") | Where-Object { `$_ -ne "$InstallPath" }
+        [Environment]::SetEnvironmentVariable("Path", (`$newPath -join ";"), "User")
+        
+        Write-Host "OXS CLI uninstalled successfully" -ForegroundColor Green
+        "@ | Out-File $uninstallerPath -Encoding UTF8
+
+        Write-Host "Installation completed successfully!" -ForegroundColor Green
+        Write-Host "You can now use 'oxs' command from any location (restart your terminal)" -ForegroundColor Cyan
+        Write-Host "To uninstall, run: powershell -ExecutionPolicy Bypass -File `"$uninstallerPath`"" -ForegroundColor Gray
+        EOF
+
+    - name: Create Windows package
+      run: |
+        cd ./publish/win-x64
+        cp ../windows-installer/install.ps1 .
+        
+        # Create README for Windows package
+        cat > README.md << 'EOF'
+        # OXS CLI - Windows Package
+
+        ## Installation
+
+        ### Option 1: Quick Install (Recommended)
+        Run the following command in PowerShell (as Administrator):
+        ```powershell
+        powershell -ExecutionPolicy Bypass -File .\install.ps1
+        ```
+
+        ### Option 2: Manual Install
+        1. Copy `oxs.exe` to a directory of your choice
+        2. Add that directory to your PATH environment variable
+
+        ## Usage
+        After installation, you can use the `oxs` command from any location in your terminal.
+
+        ## Uninstallation
+        If you used the installer, you can uninstall by running the uninstall script created during installation.
+        EOF
+        
+        # Place zip at repository root
+        powershell -Command "Compress-Archive -Path * -DestinationPath ../../../oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip"
+
+    - name: Create Linux package
+      run: |
+        cd ./publish/linux-x64
+        
+        # Create install script for Linux
+        cat > install.sh << 'EOF'
+        #!/bin/bash
+        # OXS CLI Linux Installer
+
+        INSTALL_DIR="$HOME/.local/bin"
+        EXECUTABLE_NAME="oxs"
+
+        echo "Installing OXS CLI..."
+
+        # Create installation directory
+        mkdir -p "$INSTALL_DIR"
+
+        # Copy executable
+        cp "$EXECUTABLE_NAME" "$INSTALL_DIR/$EXECUTABLE_NAME"
+        chmod +x "$INSTALL_DIR/$EXECUTABLE_NAME"
+
+        # Add to PATH in shell profiles if not already present
+        for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+            if [[ -f "$profile" ]]; then
+                if ! grep -q "$INSTALL_DIR" "$profile"; then
+                    echo "export PATH=\"\$PATH:$INSTALL_DIR\"" >> "$profile"
+                    echo "Added $INSTALL_DIR to PATH in $profile"
+                fi
+            fi
+        done
+
+        echo "Installation completed successfully!"
+        echo "Please restart your terminal or run: source ~/.bashrc (or your shell's profile)"
+        echo "You can then use the 'oxs' command from any location"
+        EOF
+
+        chmod +x install.sh
+
+        # Create README for Linux package
+        cat > README.md << 'EOF'
+        # OXS CLI - Linux Package
+
+        ## Installation
+
+        ### Option 1: Quick Install (Recommended)
+        ```bash
+        chmod +x install.sh
+        ./install.sh
+        ```
+
+        ### Option 2: Manual Install
+        1. Copy `oxs` to a directory in your PATH (e.g., `/usr/local/bin` or `~/.local/bin`)
+        2. Make it executable: `chmod +x oxs`
+
+        ## Usage
+        After installation, you can use the `oxs` command from any location in your terminal.
+        EOF
+        
+        # Place zip at repository root
+        powershell -Command "Compress-Archive -Path * -DestinationPath ../../../oxs-linux-x64-v${{ steps.version.outputs.VERSION }}.zip"
+
+    - name: Create ClickOnce installer
+      run: |
+        mkdir -p ./publish/clickonce
+        cd ./publish/clickonce
+        
+        # Copy Windows executable
+        cp ../win-x64/oxs.exe .
+        cp ../windows-installer/install.ps1 .
+        
+        # Create ClickOnce application manifest
+        cat > oxs.exe.manifest << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <asmv1:assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1" xmlns:asmv1="urn:schemas-microsoft-com:asm.v1" xmlns:asmv2="urn:schemas-microsoft-com:asm.v2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <assemblyIdentity version="${{ steps.version.outputs.VERSION }}.0" name="OXS.CLI" type="win32" />
+          <description>OXS CLI Tool</description>
+          <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+            <security>
+              <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+                <requestedExecutionLevel level="asInvoker" uiAccess="false" />
+              </requestedPrivileges>
+            </security>
+          </trustInfo>
+        </asmv1:assembly>
+        EOF
+        
+        # Create deployment manifest
+        cat > oxs.application << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <asmv1:assembly xsi:schemaLocation="urn:schemas-microsoft-com:asm.v1 assembly.adaptive.xsd" manifestVersion="1.0" xmlns:asmv1="urn:schemas-microsoft-com:asm.v1" xmlns="urn:schemas-microsoft-com:asm.v2" xmlns:asmv2="urn:schemas-microsoft-com:asm.v2" xmlns:xrml="urn:mpeg:mpeg21:2003:01-REL-R-NS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <asmv1:assemblyIdentity name="OXS.CLI.application" version="${{ steps.version.outputs.VERSION }}.0" publicKeyToken="0000000000000000" language="neutral" processorArchitecture="msil" type="win32" />
+          <description>OXS CLI Tool</description>
+          <deployment install="true" mapFileExtensions="true">
+            <subscription>
+              <update>
+                <beforeApplicationStartup />
+              </update>
+            </subscription>
+            <deploymentProvider codebase="https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.VERSION }}/oxs.application" />
+          </deployment>
+          <compatibleFrameworks xmlns="urn:schemas-microsoft-com:clickonce.v2">
+            <framework targetVersion="10.0" profile="Full" supportedRuntime="10.0.0" />
+          </compatibleFrameworks>
+          <dependency>
+            <dependentAssembly dependencyType="application" codebase="oxs.exe.manifest" size="1024">
+              <asmv1:assemblyIdentity name="OXS.CLI" version="${{ steps.version.outputs.VERSION }}.0" type="win32" />
+            </dependentAssembly>
+          </dependency>
+        </asmv1:assembly>
+        EOF
+        
+        # Place zip at repository root
+        powershell -Command "Compress-Archive -Path * -DestinationPath ../../../oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip"
+
+    - name: Prepare code signing certificate
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      shell: pwsh
+      run: |
+        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+        [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String('${{ secrets.CODE_SIGN_PFX }}'))
+        Write-Host "PFX written to $pfxPath"
+
+    - name: Import certificate to CurrentUser store
+      id: import_certificate
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      shell: pwsh
+      run: |
+        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+        $password = '${{ secrets.CODE_SIGN_PFX_PASSWORD }}'
+        $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String $password -AsPlainText -Force)
+        if (-not $cert) { throw "Failed to import certificate" }
+        Write-Host "Imported cert thumbprint: $($cert.Thumbprint)"
+        echo "CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_OUTPUT
+
+    - name: Sign Windows executable
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      shell: pwsh
+      run: |
+        $exe = "${{ github.workspace }}\src\publish\win-x64\oxs.exe"
+        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+        & signtool.exe sign /f "$pfxPath" /p "${{ secrets.CODE_SIGN_PFX_PASSWORD }}" /tr "http://timestamp.digicert.com" /td SHA256 /fd SHA256 /v "$exe"
+        & signtool.exe verify /pa /v "$exe"
+
+    - name: Sign PowerShell installer script
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      shell: pwsh
+      run: |
+        $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq '${{ steps.import_certificate.outputs.CERT_THUMBPRINT }}' } | Select-Object -First 1
+        if (-not $cert) { $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.HasPrivateKey } | Select-Object -First 1 }
+        if (-not $cert) { throw "Code signing cert not found" }
+        $installerPs1 = "${{ github.workspace }}\src\publish\win-x64\install.ps1"
+        Set-AuthenticodeSignature -FilePath $installerPs1 -Certificate $cert -TimestampServer "http://timestamp.digicert.com" | Out-Null
+        Get-AuthenticodeSignature -FilePath $installerPs1
+
+    - name: Sign ClickOnce manifests
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      shell: pwsh
+      run: |
+        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+        $clickonceDir = "${{ github.workspace }}\src\publish\clickonce"
+        $appManifest = Join-Path $clickonceDir 'oxs.application'
+        $fileManifest = Join-Path $clickonceDir 'oxs.exe.manifest'
+        # Use mage.exe (installed with .NET SDK tooling on Windows runners)
+        mage.exe -Sign $fileManifest -CertFile $pfxPath -Password "${{ secrets.CODE_SIGN_PFX_PASSWORD }}" -TimestampUri "http://timestamp.digicert.com"
+        mage.exe -Sign $appManifest -CertFile $pfxPath -Password "${{ secrets.CODE_SIGN_PFX_PASSWORD }}" -TimestampUri "http://timestamp.digicert.com"
+
+    - name: Repackage signed artifacts
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      shell: pwsh
+      run: |
+        # Recreate zip files to include signatures
+        Remove-Item "${{ github.workspace }}\src\oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip" -ErrorAction SilentlyContinue
+        Remove-Item "${{ github.workspace }}\src\oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip" -ErrorAction SilentlyContinue
+        Compress-Archive -Path "${{ github.workspace }}\src\publish\win-x64\*" -DestinationPath "${{ github.workspace }}\src\oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip"
+        Compress-Archive -Path "${{ github.workspace }}\src\publish\clickonce\*" -DestinationPath "${{ github.workspace }}\src\oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip"
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ steps.version.outputs.VERSION }}
+        name: Release v${{ steps.version.outputs.VERSION }}
+        body: |
+          ## OXS CLI Release v${{ steps.version.outputs.VERSION }}
+          
+          ### Download Options
+          
+          **Windows Users:**
+          - ?? [Windows x64 Package](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.VERSION }}/oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip) - Includes installer script
+          - ?? [ClickOnce Installer](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.VERSION }}/oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip) - One-click installation
+          
+          **Linux Users:**
+          - ?? [Linux x64 Package](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.VERSION }}/oxs-linux-x64-v${{ steps.version.outputs.VERSION }}.zip) - Includes installer script
+          
+          ### Installation Instructions
+          
+          #### Windows (Recommended)
+          1. Download the Windows x64 package
+          2. Extract the zip file
+          3. Run `install.ps1` in PowerShell as Administrator:
+             ```powershell
+             powershell -ExecutionPolicy Bypass -File .\install.ps1
+             ```
+          4. Restart your terminal and use `oxs` command
+          
+          #### Linux
+          1. Download the Linux x64 package
+          2. Extract the zip file
+          3. Run the installer:
+             ```bash
+             chmod +x install.sh
+             ./install.sh
+             ```
+          4. Restart your terminal and use `oxs` command
+          
+          ### What's New
+          - Built with .NET 10
+          - Self-contained executables (no .NET runtime required)
+          - Automatic PATH registration
+          - Easy uninstallation scripts included
+          
+          ---
+          *Built from commit ${{ github.sha }}*
+        files: |
+          oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip
+          oxs-linux-x64-v${{ steps.version.outputs.VERSION }}.zip
+          oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip
+        draft: false
+        prerelease: false
