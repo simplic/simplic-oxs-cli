@@ -7,7 +7,7 @@ on:
 
 env:
   DOTNET_VERSION: '10.0.x'
-  PROJECT_PATH: 'simplic-oxs-cli/oxs.csproj'
+  PROJECT_PATH: 'src/simplic-oxs-cli/oxs.csproj'
   OUTPUT_NAME: 'oxs'
 
 jobs:
@@ -15,9 +15,7 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
-    defaults:
-      run:
-        working-directory: ./src
+    
     
     steps:
     - name: Checkout code
@@ -55,7 +53,7 @@ jobs:
           --configuration Release \
           --runtime win-x64 \
           --self-contained true \
-          --output ./publish/win-x64 \
+          --output ./src/publish/win-x64 \
           -p:PublishSingleFile=true \
           -p:Version=${{ steps.version.outputs.VERSION }}
 
@@ -65,14 +63,14 @@ jobs:
           --configuration Release \
           --runtime linux-x64 \
           --self-contained true \
-          --output ./publish/linux-x64 \
+          --output ./src/publish/linux-x64 \
           -p:PublishSingleFile=true \
           -p:Version=${{ steps.version.outputs.VERSION }}
 
     - name: Create Windows installer script
       run: |
-        mkdir -p ./publish/windows-installer
-        cat > ./publish/windows-installer/install.ps1 << 'EOF'
+        mkdir -p ./src/publish/windows-installer
+        cat > ./src/publish/windows-installer/install.ps1 << 'EOF'
         # OXS CLI Windows Installer
         param(
             [string]$InstallPath = "$env:LOCALAPPDATA\Programs\OXS-CLI"
@@ -119,7 +117,7 @@ jobs:
 
     - name: Create Windows package
       run: |
-        cd ./publish/win-x64
+        cd ./src/publish/win-x64
         cp ../windows-installer/install.ps1 .
         
         # Create README for Windows package
@@ -150,7 +148,7 @@ jobs:
 
     - name: Create Linux package
       run: |
-        cd ./publish/linux-x64
+        cd ./src/publish/linux-x64
         
         # Create install script for Linux
         cat > install.sh << 'EOF'
@@ -211,8 +209,8 @@ jobs:
 
     - name: Create ClickOnce installer
       run: |
-        mkdir -p ./publish/clickonce
-        cd ./publish/clickonce
+        mkdir -p ./src/publish/clickonce
+        cd ./src/publish/clickonce
         
         # Copy Windows executable
         cp ../win-x64/oxs.exe .
@@ -263,7 +261,7 @@ jobs:
         powershell -Command "Compress-Archive -Path * -DestinationPath ../../../oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip"
 
     - name: Prepare code signing certificate
-      if: ${{ secrets.CODE_SIGN_PFX != '' && secrets.CODE_SIGN_PFX_PASSWORD != '' }}
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
       shell: pwsh
       run: |
         $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
@@ -272,7 +270,7 @@ jobs:
 
     - name: Import certificate to CurrentUser store
       id: import_certificate
-      if: ${{ secrets.CODE_SIGN_PFX != '' && secrets.CODE_SIGN_PFX_PASSWORD != '' }}
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
       shell: pwsh
       run: |
         $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
@@ -283,31 +281,31 @@ jobs:
         echo "CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_OUTPUT
 
     - name: Sign Windows executable
-      if: ${{ secrets.CODE_SIGN_PFX != '' && secrets.CODE_SIGN_PFX_PASSWORD != '' }}
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
       shell: pwsh
       run: |
-        $exe = "${{ github.workspace }}\src\publish\win-x64\oxs.exe"
+        $exe = "${{ github.workspace}}\src\publish\win-x64\oxs.exe"
         $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
         & signtool.exe sign /f "$pfxPath" /p "${{ secrets.CODE_SIGN_PFX_PASSWORD }}" /tr "http://timestamp.digicert.com" /td SHA256 /fd SHA256 /v "$exe"
         & signtool.exe verify /pa /v "$exe"
 
     - name: Sign PowerShell installer script
-      if: ${{ secrets.CODE_SIGN_PFX != '' && secrets.CODE_SIGN_PFX_PASSWORD != '' }}
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
       shell: pwsh
       run: |
         $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq '${{ steps.import_certificate.outputs.CERT_THUMBPRINT }}' } | Select-Object -First 1
         if (-not $cert) { $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.HasPrivateKey } | Select-Object -First 1 }
         if (-not $cert) { throw "Code signing cert not found" }
-        $installerPs1 = "${{ github.workspace }}\src\publish\win-x64\install.ps1"
+        $installerPs1 = "${{ github.workspace}}\src\publish\win-x64\install.ps1"
         Set-AuthenticodeSignature -FilePath $installerPs1 -Certificate $cert -TimestampServer "http://timestamp.digicert.com" | Out-Null
         Get-AuthenticodeSignature -FilePath $installerPs1
 
     - name: Sign ClickOnce manifests
-      if: ${{ secrets.CODE_SIGN_PFX != '' && secrets.CODE_SIGN_PFX_PASSWORD != '' }}
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
       shell: pwsh
       run: |
         $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
-        $clickonceDir = "${{ github.workspace }}\src\publish\clickonce"
+        $clickonceDir = "${{ github.workspace}}\src\publish\clickonce"
         $appManifest = Join-Path $clickonceDir 'oxs.application'
         $fileManifest = Join-Path $clickonceDir 'oxs.exe.manifest'
         # Use mage.exe (installed with .NET SDK tooling on Windows runners)
@@ -315,14 +313,14 @@ jobs:
         mage.exe -Sign $appManifest -CertFile $pfxPath -Password "${{ secrets.CODE_SIGN_PFX_PASSWORD }}" -TimestampUri "http://timestamp.digicert.com"
 
     - name: Repackage signed artifacts
-      if: ${{ secrets.CODE_SIGN_PFX != '' && secrets.CODE_SIGN_PFX_PASSWORD != '' }}
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
       shell: pwsh
       run: |
         # Recreate zip files to include signatures
-        Remove-Item "${{ github.workspace }}\src\oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip" -ErrorAction SilentlyContinue
-        Remove-Item "${{ github.workspace }}\src\oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip" -ErrorAction SilentlyContinue
-        Compress-Archive -Path "${{ github.workspace }}\src\publish\win-x64\*" -DestinationPath "${{ github.workspace }}\src\oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip"
-        Compress-Archive -Path "${{ github.workspace }}\src\publish\clickonce\*" -DestinationPath "${{ github.workspace }}\src\oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip"
+        Remove-Item "${{ github.workspace}}\src\oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip" -ErrorAction SilentlyContinue
+        Remove-Item "${{ github.workspace}}\src\oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip" -ErrorAction SilentlyContinue
+        Compress-Archive -Path "${{ github.workspace}}\src\oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip"
+        Compress-Archive -Path "${{ github.workspace}}\src\oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip"
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
@@ -336,7 +334,7 @@ jobs:
           
           **Windows Users:**
           - ?? [Windows x64 Package](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.VERSION }}/oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip) - Includes installer script
-          - ??? [ClickOnce Installer](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.VERSION }}/oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip) - One-click installation
+          - ?? [ClickOnce Installer](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.VERSION }}/oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip) - One-click installation
           
           **Linux Users:**
           - ?? [Linux x64 Package](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.VERSION }}/oxs-linux-x64-v${{ steps.version.outputs.VERSION }}.zip) - Includes installer script
@@ -376,3 +374,6 @@ jobs:
           oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip
         draft: false
         prerelease: false
+
+
+
