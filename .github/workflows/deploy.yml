@@ -33,6 +33,7 @@ jobs:
 
     - name: Get version from project
       id: version
+      shell: bash
       run: |
         # Extract version from csproj or use timestamp-based version
         if grep -q "<Version>" ${{ env.PROJECT_PATH }}; then
@@ -51,6 +52,7 @@ jobs:
       run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
 
     - name: Publish Windows x64
+      shell: bash
       run: |
         dotnet publish ${{ env.PROJECT_PATH }} \
           --configuration Release \
@@ -61,6 +63,7 @@ jobs:
           -p:Version=${{ steps.version.outputs.VERSION }}
 
     - name: Publish Linux x64
+      shell: bash
       run: |
         dotnet publish ${{ env.PROJECT_PATH }} \
           --configuration Release \
@@ -71,6 +74,7 @@ jobs:
           -p:Version=${{ steps.version.outputs.VERSION }}
 
     - name: Create Windows installer script
+      shell: bash
       run: |
         mkdir -p ./src/publish/windows-installer
         cat > ./src/publish/windows-installer/install.ps1 << 'EOF'
@@ -119,6 +123,7 @@ jobs:
         EOF
 
     - name: Create Windows package
+      shell: bash
       run: |
         cd ./src/publish/win-x64
         cp ../windows-installer/install.ps1 .
@@ -150,6 +155,7 @@ jobs:
         powershell -Command "Compress-Archive -Path * -DestinationPath ../../../oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip"
 
     - name: Create Linux package
+      shell: bash
       run: |
         cd ./src/publish/linux-x64
         
@@ -211,6 +217,7 @@ jobs:
         powershell -Command "Compress-Archive -Path * -DestinationPath ../../../oxs-linux-x64-v${{ steps.version.outputs.VERSION }}.zip"
 
     - name: Create ClickOnce installer
+      shell: bash
       run: |
         mkdir -p ./src/publish/clickonce
         cd ./src/publish/clickonce
