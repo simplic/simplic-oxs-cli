@@ -261,7 +261,7 @@ jobs:
         powershell -Command "Compress-Archive -Path * -DestinationPath ../../../oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip"
 
     - name: Prepare code signing certificate
-      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      if: ${{ secrets.CODE_SIGN_PFX != '' && secrets.CODE_SIGN_PFX_PASSWORD != '' }}
       shell: pwsh
       run: |
         $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
@@ -270,7 +270,7 @@ jobs:
 
     - name: Import certificate to CurrentUser store
       id: import_certificate
-      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      if: ${{ secrets.CODE_SIGN_PFX != '' && secrets.CODE_SIGN_PFX_PASSWORD != '' }}
       shell: pwsh
       run: |
         $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
@@ -281,7 +281,7 @@ jobs:
         echo "CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_OUTPUT
 
     - name: Sign Windows executable
-      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      if: ${{ secrets.CODE_SIGN_PFX != '' && secrets.CODE_SIGN_PFX_PASSWORD != '' }}
       shell: pwsh
       run: |
         $exe = "${{ github.workspace}}\src\publish\win-x64\oxs.exe"
@@ -290,7 +290,7 @@ jobs:
         & signtool.exe verify /pa /v "$exe"
 
     - name: Sign PowerShell installer script
-      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      if: ${{ secrets.CODE_SIGN_PFX != '' && secrets.CODE_SIGN_PFX_PASSWORD != '' }}
       shell: pwsh
       run: |
         $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq '${{ steps.import_certificate.outputs.CERT_THUMBPRINT }}' } | Select-Object -First 1
@@ -301,7 +301,7 @@ jobs:
         Get-AuthenticodeSignature -FilePath $installerPs1
 
     - name: Sign ClickOnce manifests
-      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      if: ${{ secrets.CODE_SIGN_PFX != '' && secrets.CODE_SIGN_PFX_PASSWORD != '' }}
       shell: pwsh
       run: |
         $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
@@ -313,14 +313,20 @@ jobs:
         mage.exe -Sign $appManifest -CertFile $pfxPath -Password "${{ secrets.CODE_SIGN_PFX_PASSWORD }}" -TimestampUri "http://timestamp.digicert.com"
 
     - name: Repackage signed artifacts
-      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      if: ${{ secrets.CODE_SIGN_PFX != '' && secrets.CODE_SIGN_PFX_PASSWORD != '' }}
       shell: pwsh
       run: |
         # Recreate zip files to include signatures
-        Remove-Item "${{ github.workspace}}\src\oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip" -ErrorAction SilentlyContinue
-        Remove-Item "${{ github.workspace}}\src\oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip" -ErrorAction SilentlyContinue
-        Compress-Archive -Path "${{ github.workspace}}\src\oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip"
-        Compress-Archive -Path "${{ github.workspace}}\src\oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip"
+        Remove-Item "oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip" -ErrorAction SilentlyContinue
+        Remove-Item "oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip" -ErrorAction SilentlyContinue
+        
+        # Recreate Windows package
+        cd ./src/publish/win-x64
+        Compress-Archive -Path * -DestinationPath "../../../oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip" -Force
+        
+        # Recreate ClickOnce package
+        cd ../clickonce
+        Compress-Archive -Path * -DestinationPath "../../../oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip" -Force
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
