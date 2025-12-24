@@ -12,7 +12,7 @@ env:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     permissions:
       contents: write
     defaults:
@@ -146,7 +146,7 @@ jobs:
         EOF
         
         # Place zip at repository root
-        zip -r ../../../oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip .
+        powershell -Command "Compress-Archive -Path * -DestinationPath ../../../oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip"
 
     - name: Create Linux package
       run: |
@@ -207,7 +207,7 @@ jobs:
         EOF
         
         # Place zip at repository root
-        zip -r ../../../oxs-linux-x64-v${{ steps.version.outputs.VERSION }}.zip .
+        powershell -Command "Compress-Archive -Path * -DestinationPath ../../../oxs-linux-x64-v${{ steps.version.outputs.VERSION }}.zip"
 
     - name: Create ClickOnce installer
       run: |
@@ -260,7 +260,69 @@ jobs:
         EOF
         
         # Place zip at repository root
-        zip -r ../../../oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip .
+        powershell -Command "Compress-Archive -Path * -DestinationPath ../../../oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip"
+
+    - name: Prepare code signing certificate
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      shell: pwsh
+      run: |
+        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+        [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String('${{ secrets.CODE_SIGN_PFX }}'))
+        Write-Host "PFX written to $pfxPath"
+
+    - name: Import certificate to CurrentUser store
+      id: import_certificate
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      shell: pwsh
+      run: |
+        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+        $password = '${{ secrets.CODE_SIGN_PFX_PASSWORD }}'
+        $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String $password -AsPlainText -Force)
+        if (-not $cert) { throw "Failed to import certificate" }
+        Write-Host "Imported cert thumbprint: $($cert.Thumbprint)"
+        echo "CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_OUTPUT
+
+    - name: Sign Windows executable
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      shell: pwsh
+      run: |
+        $exe = "${{ github.workspace }}\src\publish\win-x64\oxs.exe"
+        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+        & signtool.exe sign /f "$pfxPath" /p "${{ secrets.CODE_SIGN_PFX_PASSWORD }}" /tr "http://timestamp.digicert.com" /td SHA256 /fd SHA256 /v "$exe"
+        & signtool.exe verify /pa /v "$exe"
+
+    - name: Sign PowerShell installer script
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      shell: pwsh
+      run: |
+        $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq '${{ steps.import_certificate.outputs.CERT_THUMBPRINT }}' } | Select-Object -First 1
+        if (-not $cert) { $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.HasPrivateKey } | Select-Object -First 1 }
+        if (-not $cert) { throw "Code signing cert not found" }
+        $installerPs1 = "${{ github.workspace }}\src\publish\win-x64\install.ps1"
+        Set-AuthenticodeSignature -FilePath $installerPs1 -Certificate $cert -TimestampServer "http://timestamp.digicert.com" | Out-Null
+        Get-AuthenticodeSignature -FilePath $installerPs1
+
+    - name: Sign ClickOnce manifests
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      shell: pwsh
+      run: |
+        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+        $clickonceDir = "${{ github.workspace }}\src\publish\clickonce"
+        $appManifest = Join-Path $clickonceDir 'oxs.application'
+        $fileManifest = Join-Path $clickonceDir 'oxs.exe.manifest'
+        # Use mage.exe (installed with .NET SDK tooling on Windows runners)
+        mage.exe -Sign $fileManifest -CertFile $pfxPath -Password "${{ secrets.CODE_SIGN_PFX_PASSWORD }}" -TimestampUri "http://timestamp.digicert.com"
+        mage.exe -Sign $appManifest -CertFile $pfxPath -Password "${{ secrets.CODE_SIGN_PFX_PASSWORD }}" -TimestampUri "http://timestamp.digicert.com"
+
+    - name: Repackage signed artifacts
+      if: ${{ secrets.CODE_SIGN_PFX && secrets.CODE_SIGN_PFX_PASSWORD }}
+      shell: pwsh
+      run: |
+        # Recreate zip files to include signatures
+        Remove-Item "${{ github.workspace }}\src\oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip" -ErrorAction SilentlyContinue
+        Remove-Item "${{ github.workspace }}\src\oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip" -ErrorAction SilentlyContinue
+        Compress-Archive -Path "${{ github.workspace }}\src\publish\win-x64\*" -DestinationPath "${{ github.workspace }}\src\oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip"
+        Compress-Archive -Path "${{ github.workspace }}\src\publish\clickonce\*" -DestinationPath "${{ github.workspace }}\src\oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip"
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
