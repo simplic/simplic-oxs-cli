@@ -296,8 +296,18 @@ jobs:
       run: |
         $exe = "${{ github.workspace}}\src\publish\win-x64\oxs.exe"
         $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
-        & signtool.exe sign /f "$pfxPath" /p "$env:CODE_SIGN_PFX_PASSWORD" /tr "http://timestamp.digicert.com" /td SHA256 /fd SHA256 /v "$exe"
-        & signtool.exe verify /pa /v "$exe"
+        # Locate signtool.exe
+        $signTool = Get-Command signtool.exe -ErrorAction SilentlyContinue
+        if (-not $signTool) {
+          $signTool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match "\\x64\\" } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+        }
+        if (-not $signTool) { throw "signtool.exe not found on runner" }
+        $signToolPath = if ($signTool -is [System.Management.Automation.CommandInfo]) { $signTool.Source } else { $signTool.FullName }
+        & "$signToolPath" sign /f "$pfxPath" /p "$env:CODE_SIGN_PFX_PASSWORD" /tr "http://timestamp.digicert.com" /td SHA256 /fd SHA256 /v "$exe"
+        & "$signToolPath" verify /pa /v "$exe"
 
     - name: Sign PowerShell installer script
       if: ${{ env.CODE_SIGN_PFX != '' && env.CODE_SIGN_PFX_PASSWORD != '' }}
@@ -318,9 +328,17 @@ jobs:
         $clickonceDir = "${{ github.workspace}}\src\publish\clickonce"
         $appManifest = Join-Path $clickonceDir 'oxs.application'
         $fileManifest = Join-Path $clickonceDir 'oxs.exe.manifest'
-        # Use mage.exe (installed with .NET SDK tooling on Windows runners)
-        mage.exe -Sign $fileManifest -CertFile $pfxPath -Password "$env:CODE_SIGN_PFX_PASSWORD" -TimestampUri "http://timestamp.digicert.com"
-        mage.exe -Sign $appManifest -CertFile $pfxPath -Password "$env:CODE_SIGN_PFX_PASSWORD" -TimestampUri "http://timestamp.digicert.com"
+        # Locate mage.exe (ClickOnce tool)
+        $mage = Get-Command mage.exe -ErrorAction SilentlyContinue
+        if (-not $mage) {
+          $mage = Get-ChildItem "C:\Program Files (x86)" -Recurse -Filter mage.exe -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+        }
+        if (-not $mage) { throw "mage.exe not found on runner" }
+        $magePath = if ($mage -is [System.Management.Automation.CommandInfo]) { $mage.Source } else { $mage.FullName }
+        & "$magePath" -Sign $fileManifest -CertFile $pfxPath -Password "$env:CODE_SIGN_PFX_PASSWORD" -TimestampUri "http://timestamp.digicert.com"
+        & "$magePath" -Sign $appManifest -CertFile $pfxPath -Password "$env:CODE_SIGN_PFX_PASSWORD" -TimestampUri "http://timestamp.digicert.com"
 
     - name: Repackage signed artifacts
       if: ${{ env.CODE_SIGN_PFX != '' && env.CODE_SIGN_PFX_PASSWORD != '' }}
