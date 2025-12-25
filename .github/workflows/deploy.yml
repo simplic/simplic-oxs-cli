@@ -356,16 +356,16 @@ jobs:
           $global:LASTEXITCODE = 0
         }
 
-    - name: Sign PowerShell installer script
-      if: ${{ env.CODE_SIGN_PFX != '' && env.CODE_SIGN_PFX_PASSWORD != '' }}
-      shell: pwsh
-      run: |
-        $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq '${{ steps.import_certificate.outputs.CERT_THUMBPRINT }}' } | Select-Object -First 1
-        if (-not $cert) { $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.HasPrivateKey } | Select-Object -First 1 }
-        if (-not $cert) { throw "Code signing cert not found" }
-        $installerPs1 = "${{ github.workspace}}\src\publish\win-x64\install.ps1"
-        Set-AuthenticodeSignature -FilePath $installerPs1 -Certificate $cert -TimestampServer "http://timestamp.digicert.com" | Out-Null
-        Get-AuthenticodeSignature -FilePath $installerPs1
+    # - name: Sign PowerShell installer script
+    #   if: ${{ env.CODE_SIGN_PFX != '' && env.CODE_SIGN_PFX_PASSWORD != '' }}
+    #   shell: pwsh
+    #   run: |
+    #     $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq '${{ steps.import_certificate.outputs.CERT_THUMBPRINT }}' } | Select-Object -First 1
+    #     if (-not $cert) { $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.HasPrivateKey } | Select-Object -First 1 }
+    #     if (-not $cert) { throw "Code signing cert not found" }
+    #     $installerPs1 = "${{ github.workspace}}\src\publish\win-x64\install.ps1"
+    #     Set-AuthenticodeSignature -FilePath $installerPs1 -Certificate $cert -TimestampServer "http://timestamp.digicert.com" | Out-Null
+    #     Get-AuthenticodeSignature -FilePath $installerPs1
 
     - name: Sign ClickOnce manifests
       if: ${{ env.CODE_SIGN_PFX != '' && env.CODE_SIGN_PFX_PASSWORD != '' }}
