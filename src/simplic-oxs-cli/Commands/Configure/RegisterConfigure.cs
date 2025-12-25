@@ -13,6 +13,11 @@ namespace oxs.Commands.Configure
             });
 
             config.AddCommand<HttpCommand>("http");
+
+            config.AddBranch<Flow.FlowSettings>("flow", add =>
+            {
+                add.AddCommand<Flow.FlowPushNodeDefCommand>("push-node-def");
+            });
         }
     }
 }

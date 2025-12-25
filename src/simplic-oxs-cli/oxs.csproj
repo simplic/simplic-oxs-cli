@@ -10,9 +10,9 @@
     <Product>OXS CLI Tool</Product>
     <Description>Command line interface for OXS operations</Description>
     <Copyright>Copyright � 2025</Copyright>
-    <Version>1.0.3</Version>
-    <AssemblyVersion>1.0.3</AssemblyVersion>
-    <FileVersion>1.0.3</FileVersion>
+    <Version>1.0.4</Version>
+    <AssemblyVersion>1.0.4</AssemblyVersion>
+    <FileVersion>1.0.4</FileVersion>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
@@ -23,8 +23,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ini-parser" Version="2.5.2" />
+    <PackageReference Include="ini-parser" Version="3.4.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="Simplic.OxS.Flow.Meta" Version="1.0.525.1215" />
+    <PackageReference Include="Simplic.OxS.Flow.Runtime" Version="1.1.2325.1215" />
     <PackageReference Include="Spectre.Console.Cli" Version="0.53.1" />
   </ItemGroup>
 
