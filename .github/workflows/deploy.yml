@@ -118,7 +118,7 @@ jobs:
         EOF
         
         # Place zip at repository root
-        powershell -Command "Compress-Archive -Path * -DestinationPath ../../../oxs-linux-x64-v${{ steps.version.outputs.VERSION }}.zip"
+        zip -r ../../../oxs-linux-x64-v${{ steps.version.outputs.VERSION }}.zip .
 
     - name: Upload Linux artifact
       uses: actions/upload-artifact@v4
