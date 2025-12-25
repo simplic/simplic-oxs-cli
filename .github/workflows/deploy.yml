@@ -30,6 +30,14 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
+    - name: Authenticate with GitHub NuGet registry
+      run: |
+        dotnet nuget add source https://nuget.pkg.github.com/simplic/index.json \
+          --name simplic_github_registry \
+          --username ${{ secrets.GH_REGISTRY_USER }} \
+          --password ${{ secrets.GH_REGISTRY_TOKEN }} \
+          --store-password-in-clear-text
+
     - name: Restore dependencies
       run: dotnet restore src
 
@@ -154,6 +162,14 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Authenticate with GitHub NuGet registry
+      run: |
+        dotnet nuget add source https://nuget.pkg.github.com/simplic/index.json \
+          --name simplic_github_registry \
+          --username ${{ secrets.GH_REGISTRY_USER }} \
+          --password ${{ secrets.GH_REGISTRY_TOKEN }} \
+          --store-password-in-clear-text
 
     - name: Get version from project
       id: version
