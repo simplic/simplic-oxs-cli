@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      GH_REGISTRY_USER: ${{ secrets.GH_REGISTRY_USER }}
+      GH_REGISTRY_TOKEN: ${{ secrets.GH_REGISTRY_TOKEN }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -26,9 +29,6 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-
-    - name: Add simplic github nuget source
-      run: dotnet nuget add source "https://nuget.pkg.github.com/simplic/index.json" --name simplic_github_registry --username ${{ secrets.GH_REGISTRY_USER }} --password ${{ secrets.GH_REGISTRY_TOKEN }} --store-password-in-clear-text
 
     - name: Restore dependencies
       run: dotnet restore src
@@ -140,6 +140,8 @@ jobs:
     permissions:
       contents: write
     env:
+      GH_REGISTRY_USER: ${{ secrets.GH_REGISTRY_USER }}
+      GH_REGISTRY_TOKEN: ${{ secrets.GH_REGISTRY_TOKEN }}
       CODE_SIGN_PFX: ${{ secrets.CODE_SIGN_PFX }}
       CODE_SIGN_PFX_PASSWORD: ${{ secrets.CODE_SIGN_PFX_PASSWORD }}
     steps:
@@ -441,6 +443,10 @@ jobs:
           ./dist/oxs-linux-x64-v${{ steps.version.outputs.VERSION }}.zip
         draft: false
         prerelease: false
+
+
+
+
 
 
 
