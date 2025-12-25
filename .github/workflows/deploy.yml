@@ -381,14 +381,6 @@ jobs:
         # Try to get release notes for the current version
         WHATS_NEW=$(extract_version_content "$VERSION")
         
-        if [ -z "$WHATS_NEW" ] || [ "$WHATS_NEW" = "Version $VERSION not found in RELEASENOTES.md" ]; then
-          # Fallback content if version not found in RELEASENOTES.md
-          WHATS_NEW="- Built with .NET 10
-      - Self-contained executables (no .NET runtime required)
-      - Automatic PATH registration
-      - Easy uninstallation scripts included"
-        fi
-        
         # Save to output, handling multiline content
         {
           echo 'WHATS_NEW<<EOF'
