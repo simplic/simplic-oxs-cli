@@ -176,6 +176,51 @@ jobs:
           -p:PublishSingleFile=true \
           -p:Version=${{ steps.version.outputs.VERSION }}
 
+    - name: Prepare code signing certificate
+      if: ${{ env.CODE_SIGN_PFX != '' && env.CODE_SIGN_PFX_PASSWORD != '' }}
+      shell: pwsh
+      run: |
+        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+        [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:CODE_SIGN_PFX))
+        Write-Host "PFX written to $pfxPath"
+
+    - name: Import certificate to CurrentUser store
+      id: import_certificate
+      if: ${{ env.CODE_SIGN_PFX != '' && env.CODE_SIGN_PFX_PASSWORD != '' }}
+      shell: pwsh
+      run: |
+        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+        $password = $env:CODE_SIGN_PFX_PASSWORD
+        $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String $password -AsPlainText -Force)
+        if (-not $cert) { throw "Failed to import certificate" }
+        Write-Host "Imported cert thumbprint: $($cert.Thumbprint)"
+        echo "CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_OUTPUT
+
+    - name: Sign Windows executable
+      if: ${{ env.CODE_SIGN_PFX != '' && env.CODE_SIGN_PFX_PASSWORD != '' }}
+      shell: pwsh
+      run: |
+        $exe = "${{ github.workspace}}\src\publish\win-x64\oxs.exe"
+        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+        # Locate signtool.exe
+        $signTool = Get-Command signtool.exe -ErrorAction SilentlyContinue
+        if (-not $signTool) {
+          $signTool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match "\\x64\\" } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+        }
+        if (-not $signTool) { throw "signtool.exe not found on runner" }
+        $signToolPath = if ($signTool -is [System.Management.Automation.CommandInfo]) { $signTool.Source } else { $signTool.FullName }
+        & "$signToolPath" sign /f "$pfxPath" /p "$env:CODE_SIGN_PFX_PASSWORD" /tr "http://timestamp.digicert.com" /td SHA256 /fd SHA256 /v "$exe"
+        # Verify signature; if using a self-signed certificate, verification may fail due to untrusted root.
+        # Do not fail the pipeline in that case; emit a warning and continue.
+        & "$signToolPath" verify /pa /v "$exe"
+        if ($LASTEXITCODE -ne 0) {
+          Write-Warning "Signature verification failed (possibly due to self-signed certificate). Continuing without failing the job."
+          $global:LASTEXITCODE = 0
+        }
+
     - name: Create Windows installer script
       shell: bash
       run: |
@@ -256,160 +301,12 @@ jobs:
         
         # Place zip at repository root
         powershell -Command "Compress-Archive -Path * -DestinationPath ../../../oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip"
-
-    - name: Create ClickOnce installer
-      shell: bash
-      run: |
-        mkdir -p ./src/publish/clickonce
-        cd ./src/publish/clickonce
-        
-        # Copy Windows executable
-        cp ../win-x64/oxs.exe .
-        cp ../windows-installer/install.ps1 .
-        
-        # Create ClickOnce application manifest
-        cat > oxs.exe.manifest << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <asmv1:assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1" xmlns:asmv1="urn:schemas-microsoft-com:asm.v1" xmlns:asmv2="urn:schemas-microsoft-com:asm.v2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <assemblyIdentity version="${{ steps.version.outputs.VERSION }}.0" name="OXS.CLI" type="win32" />
-          <description>OXS CLI Tool</description>
-          <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
-            <security>
-              <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-                <requestedExecutionLevel level="asInvoker" uiAccess="false" />
-              </requestedPrivileges>
-            </security>
-          </trustInfo>
-        </asmv1:assembly>
-        EOF
-        
-        # Create deployment manifest
-        cat > oxs.application << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <asmv1:assembly xsi:schemaLocation="urn:schemas-microsoft-com:asm.v1 assembly.adaptive.xsd" manifestVersion="1.0" xmlns:asmv1="urn:schemas-microsoft-com:asm.v1" xmlns="urn:schemas-microsoft-com:asm.v2" xmlns:asmv2="urn:schemas-microsoft-com:asm.v2" xmlns:xrml="urn:mpeg:mpeg21:2003:01-REL-R-NS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <asmv1:assemblyIdentity name="OXS.CLI.application" version="${{ steps.version.outputs.VERSION }}.0" publicKeyToken="0000000000000000" language="neutral" processorArchitecture="msil" type="win32" />
-          <description>OXS CLI Tool</description>
-          <deployment install="true" mapFileExtensions="true">
-            <subscription>
-              <update>
-                <beforeApplicationStartup />
-              </update>
-            </subscription>
-            <deploymentProvider codebase="https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.VERSION }}/oxs.application" />
-          </deployment>
-          <compatibleFrameworks xmlns="urn:schemas-microsoft-com:clickonce.v2">
-            <framework targetVersion="10.0" profile="Full" supportedRuntime="10.0.0" />
-          </compatibleFrameworks>
-          <dependency>
-            <dependentAssembly dependencyType="application" codebase="oxs.exe.manifest" size="1024">
-              <asmv1:assemblyIdentity name="OXS.CLI" version="${{ steps.version.outputs.VERSION }}.0" type="win32" />
-            </dependentAssembly>
-          </dependency>
-        </asmv1:assembly>
-        EOF
-        
-        # Place zip at repository root
-        powershell -Command "Compress-Archive -Path * -DestinationPath ../../../oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip"
-
-    - name: Prepare code signing certificate
-      if: ${{ env.CODE_SIGN_PFX != '' && env.CODE_SIGN_PFX_PASSWORD != '' }}
-      shell: pwsh
-      run: |
-        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
-        [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:CODE_SIGN_PFX))
-        Write-Host "PFX written to $pfxPath"
-
-    - name: Import certificate to CurrentUser store
-      id: import_certificate
-      if: ${{ env.CODE_SIGN_PFX != '' && env.CODE_SIGN_PFX_PASSWORD != '' }}
-      shell: pwsh
-      run: |
-        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
-        $password = $env:CODE_SIGN_PFX_PASSWORD
-        $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String $password -AsPlainText -Force)
-        if (-not $cert) { throw "Failed to import certificate" }
-        Write-Host "Imported cert thumbprint: $($cert.Thumbprint)"
-        echo "CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_OUTPUT
-
-    - name: Sign Windows executable
-      if: ${{ env.CODE_SIGN_PFX != '' && env.CODE_SIGN_PFX_PASSWORD != '' }}
-      shell: pwsh
-      run: |
-        $exe = "${{ github.workspace}}\src\publish\win-x64\oxs.exe"
-        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
-        # Locate signtool.exe
-        $signTool = Get-Command signtool.exe -ErrorAction SilentlyContinue
-        if (-not $signTool) {
-          $signTool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -match "\\x64\\" } |
-            Sort-Object FullName -Descending |
-            Select-Object -First 1
-        }
-        if (-not $signTool) { throw "signtool.exe not found on runner" }
-        $signToolPath = if ($signTool -is [System.Management.Automation.CommandInfo]) { $signTool.Source } else { $signTool.FullName }
-        & "$signToolPath" sign /f "$pfxPath" /p "$env:CODE_SIGN_PFX_PASSWORD" /tr "http://timestamp.digicert.com" /td SHA256 /fd SHA256 /v "$exe"
-        # Verify signature; if using a self-signed certificate, verification may fail due to untrusted root.
-        # Do not fail the pipeline in that case; emit a warning and continue.
-        & "$signToolPath" verify /pa /v "$exe"
-        if ($LASTEXITCODE -ne 0) {
-          Write-Warning "Signature verification failed (possibly due to self-signed certificate). Continuing without failing the job."
-          $global:LASTEXITCODE = 0
-        }
-
-    # - name: Sign PowerShell installer script
-    #   if: ${{ env.CODE_SIGN_PFX != '' && env.CODE_SIGN_PFX_PASSWORD != '' }}
-    #   shell: pwsh
-    #   run: |
-    #     $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq '${{ steps.import_certificate.outputs.CERT_THUMBPRINT }}' } | Select-Object -First 1
-    #     if (-not $cert) { $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.HasPrivateKey } | Select-Object -First 1 }
-    #     if (-not $cert) { throw "Code signing cert not found" }
-    #     $installerPs1 = "${{ github.workspace}}\src\publish\win-x64\install.ps1"
-    #     Set-AuthenticodeSignature -FilePath $installerPs1 -Certificate $cert -TimestampServer "http://timestamp.digicert.com" | Out-Null
-    #     Get-AuthenticodeSignature -FilePath $installerPs1
-
-    - name: Sign ClickOnce manifests
-      if: ${{ env.CODE_SIGN_PFX != '' && env.CODE_SIGN_PFX_PASSWORD != '' }}
-      shell: pwsh
-      run: |
-        $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
-        $clickonceDir = "${{ github.workspace}}\src\publish\clickonce"
-        $appManifest = Join-Path $clickonceDir 'oxs.application'
-        $fileManifest = Join-Path $clickonceDir 'oxs.exe.manifest'
-        # Locate mage.exe (ClickOnce tool)
-        $mage = Get-Command mage.exe -ErrorAction SilentlyContinue
-        if (-not $mage) {
-          $mage = Get-ChildItem "C:\Program Files (x86)" -Recurse -Filter mage.exe -ErrorAction SilentlyContinue |
-            Sort-Object FullName -Descending |
-            Select-Object -First 1
-        }
-        if (-not $mage) { throw "mage.exe not found on runner" }
-        $magePath = if ($mage -is [System.Management.Automation.CommandInfo]) { $mage.Source } else { $mage.FullName }
-        & "$magePath" -Sign $fileManifest -CertFile $pfxPath -Password "$env:CODE_SIGN_PFX_PASSWORD" -TimestampUri "http://timestamp.digicert.com"
-        & "$magePath" -Sign $appManifest -CertFile $pfxPath -Password "$env:CODE_SIGN_PFX_PASSWORD" -TimestampUri "http://timestamp.digicert.com"
-
-    - name: Repackage signed artifacts
-      if: ${{ env.CODE_SIGN_PFX != '' && env.CODE_SIGN_PFX_PASSWORD != '' }}
-      shell: pwsh
-      run: |
-        # Recreate zip files to include signatures
-        Remove-Item "oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip" -ErrorAction SilentlyContinue
-        Remove-Item "oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip" -ErrorAction SilentlyContinue
-        
-        # Recreate Windows package
-        cd ./src/publish/win-x64
-        Compress-Archive -Path * -DestinationPath "../../../oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip" -Force
-        
-        # Recreate ClickOnce package
-        cd ../clickonce
-        Compress-Archive -Path * -DestinationPath "../../../oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip" -Force
-
     - name: Upload Windows artifacts
       uses: actions/upload-artifact@v4
       with:
         name: windows-artifacts
         path: |
           oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip
-          oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip
 
   release:
     name: Create GitHub Release
@@ -428,16 +325,17 @@ jobs:
       with:
         name: windows-artifacts
         path: ./dist
-    - name: Determine version
+    - name: Get version from project
       id: version
+      shell: bash
       run: |
-        # Extract version from filenames (assumes consistent naming)
-        FILE=$(ls ./dist/oxs-linux-x64-v*.zip | head -n1)
-        VER=$(basename "$FILE")
-        VER=${VER#oxs-linux-x64-v}
-        VER=${VER%.zip}
-        echo "VERSION=$VER" >> $GITHUB_OUTPUT
-        echo "Version: $VER"
+        if grep -q "<Version>" ${{ env.PROJECT_PATH }}; then
+          VERSION=$(grep "<Version>" ${{ env.PROJECT_PATH }} | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/')
+        else
+          VERSION="1.0.$(date +'%Y%m%d').$(git rev-parse --short HEAD)"
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
@@ -450,11 +348,10 @@ jobs:
           ### Download Options
           
           **Windows Users:**
-          - ?? [Windows x64 Package](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.VERSION }}/oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip) - Includes installer script
-          - ?? [ClickOnce Installer](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.VERSION }}/oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip) - One-click installation
+          - ? [Windows x64 Package](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.VERSION }}/oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip) - Includes installer script
           
           **Linux Users:**
-          - ?? [Linux x64 Package](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.VERSION }}/oxs-linux-x64-v${{ steps.version.outputs.VERSION }}.zip) - Includes installer script
+          - ? [Linux x64 Package](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.VERSION }}/oxs-linux-x64-v${{ steps.version.outputs.VERSION }}.zip) - Includes installer script
           
           ### Installation Instructions
           
@@ -488,7 +385,6 @@ jobs:
         files: |
           ./dist/oxs-windows-x64-v${{ steps.version.outputs.VERSION }}.zip
           ./dist/oxs-linux-x64-v${{ steps.version.outputs.VERSION }}.zip
-          ./dist/oxs-clickonce-installer-v${{ steps.version.outputs.VERSION }}.zip
         draft: false
         prerelease: false
 
