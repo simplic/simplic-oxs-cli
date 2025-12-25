@@ -15,13 +15,6 @@ public static class Program
         app.Configure(config =>
         {
             RegisterConfigure.RegisterCommands(config);
-
-            // config.AddBranch<ConfigureSettings>("package", add =>
-            // {
-            //     add.AddCommand<ConfigureEnvCommand>("new");
-            //     add.AddCommand<AddReferenceCommand>("pack");
-            //     add.AddCommand<AddReferenceCommand>("puch");
-            // });
         });
 
         return app.Run(args);

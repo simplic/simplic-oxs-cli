@@ -341,6 +341,61 @@ jobs:
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
 
+    - name: Extract release notes
+      id: release_notes
+      shell: bash
+      run: |
+        VERSION="${{ steps.version.outputs.VERSION }}"
+        
+        # Function to extract content for a specific version
+        extract_version_content() {
+          local version="$1"
+          local file="RELEASENOTES.md"
+          
+          if [ ! -f "$file" ]; then
+            echo "RELEASENOTES.md not found"
+            return 1
+          fi
+          
+          # Look for the version header (e.g., "# 1.0.2")
+          local start_line=$(grep -n "^# $version" "$file" | head -1 | cut -d: -f1)
+          
+          if [ -z "$start_line" ]; then
+            echo "Version $version not found in RELEASENOTES.md"
+            return 1
+          fi
+          
+          # Find the next version header or end of file
+          local next_version_line=$(tail -n +$((start_line + 1)) "$file" | grep -n "^# " | head -1 | cut -d: -f1)
+          
+          if [ -n "$next_version_line" ]; then
+            # Extract content between this version and next version
+            local end_line=$((start_line + next_version_line - 1))
+            sed -n "${start_line},${end_line}p" "$file" | tail -n +2 | head -n -1
+          else
+            # Extract from this version to end of file
+            tail -n +$((start_line + 1)) "$file"
+          fi
+        }
+        
+        # Try to get release notes for the current version
+        WHATS_NEW=$(extract_version_content "$VERSION")
+        
+        if [ -z "$WHATS_NEW" ] || [ "$WHATS_NEW" = "Version $VERSION not found in RELEASENOTES.md" ]; then
+          # Fallback content if version not found in RELEASENOTES.md
+          WHATS_NEW="- Built with .NET 10
+      - Self-contained executables (no .NET runtime required)
+      - Automatic PATH registration
+      - Easy uninstallation scripts included"
+        fi
+        
+        # Save to output, handling multiline content
+        {
+          echo 'WHATS_NEW<<EOF'
+          echo "$WHATS_NEW"
+          echo 'EOF'
+        } >> $GITHUB_OUTPUT
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
@@ -379,10 +434,7 @@ jobs:
           4. Restart your terminal and use `oxs` command
           
           ### What's New
-          - Built with .NET 10
-          - Self-contained executables (no .NET runtime required)
-          - Automatic PATH registration
-          - Easy uninstallation scripts included
+          ${{ steps.release_notes.outputs.WHATS_NEW }}
           
           ---
           *Built from commit ${{ github.sha }}*
@@ -391,6 +443,8 @@ jobs:
           ./dist/oxs-linux-x64-v${{ steps.version.outputs.VERSION }}.zip
         draft: false
         prerelease: false
+
+
 
 
 
