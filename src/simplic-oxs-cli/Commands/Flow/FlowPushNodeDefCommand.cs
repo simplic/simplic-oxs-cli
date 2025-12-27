@@ -125,10 +125,6 @@ namespace oxs.Commands.Flow
         }
     }
 
-    // Minimal models and request DTOs for API
-    public enum NodeDefinitionType { Action, Event }
-    public enum NodeDefinitionTarget { Ox, Oxs }
-
     public class NodePackage
     {
         public string? Name { get; set; }
@@ -146,12 +142,12 @@ namespace oxs.Commands.Flow
     public class NodeDefinition
     {
         public string? Id { get; set; }
-        public NodeDefinitionType Type { get; set; }
+        public string Type { get; set; }
         public string? DisplayName { get; set; }
         public string? DisplayKey { get; set; }
         public string? Description { get; set; }
         public string? Markdown { get; set; }
-        public NodeDefinitionTarget Target { get; set; }
+        public string Target { get; set; }
         public CustomDataInPinTemplateDefinition? CustomDataInPinTemplate { get; set; }
         public CustomFlowOutPinTemplateDefinition? CustomFlowOutPinTemplate { get; set; }
         public DataInPinDefinition[]? DataInPins { get; set; }
@@ -164,13 +160,13 @@ namespace oxs.Commands.Flow
     public class PostNodeDefinitionRequest
     {
         public string? Id { get; set; }
-        public NodeDefinitionType Type { get; set; }
+        public string Type { get; set; }
         public string? EventName { get; set; }
         public string? DisplayName { get; set; }
         public string? DisplayKey { get; set; }
         public string? Description { get; set; }
         public string? Markdown { get; set; }
-        public NodeDefinitionTarget Target { get; set; }
+        public string Target { get; set; }
         public CustomDataInPinTemplateDefinition? CustomDataInPinTemplate { get; set; }
         public CustomFlowOutPinTemplateDefinition? CustomFlowOutPinTemplate { get; set; }
         public DataInPinDefinition[]? DataInPins { get; set; }
@@ -250,8 +246,8 @@ namespace oxs.Commands.Flow
                 if (meta == null) continue;
 
                 string id = meta.Id ?? t.FullName ?? t.Name;
-                var nodeType = Enum.TryParse<NodeDefinitionType>(meta.Type, true, out var nt) ? nt : NodeDefinitionType.Action;
-                var target = Enum.TryParse<NodeDefinitionTarget>(meta.Target, true, out var tg) ? tg : NodeDefinitionTarget.Ox;
+                var nodeType = meta.Type;
+                var target = meta.Target;
                 string? eventName = meta.EventName;
 
                 var desc = t.GetCustomAttribute<FlowNodeDescriptionMetaAttribute>();
