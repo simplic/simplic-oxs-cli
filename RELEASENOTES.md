@@ -10,3 +10,7 @@
 # 1.0.5
 
 - Fix bug in `oxs flow push-node-def` command where section parameter was not being handled correctly. (type and taget)
+
+# 1.0.6
+
+- `oxs flow push-node-def` no supports pushing markdown documentation that is compiled into the flow dll as embedded resources. The name of the file must be `<class-name>.md`

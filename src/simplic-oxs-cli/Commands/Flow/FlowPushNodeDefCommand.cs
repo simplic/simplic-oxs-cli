@@ -307,6 +307,12 @@ namespace oxs.Commands.Flow
                     };
                 }
 
+                // Try to get embedded markdown content, fallback to generated markdown
+                var embeddedMarkdown = GetEmbeddedMarkdown(asm, t.Name);
+                var markdown = !string.IsNullOrWhiteSpace(embeddedMarkdown) 
+                    ? embeddedMarkdown 
+                    : $"# {displayName ?? t.Name}\n\nNode ID: `{id}`\nType: `{t.FullName}`";
+
                 var def = new NodeDefinition
                 {
                     Id = id,
@@ -314,7 +320,7 @@ namespace oxs.Commands.Flow
                     DisplayName = displayName,
                     DisplayKey = displayKey,
                     Description = description,
-                    Markdown = $"# {displayName ?? t.Name}\n\nNode ID: `{id}`\nType: `{t.FullName}`",
+                    Markdown = markdown,
                     Target = target,
                     CustomDataInPinTemplate = customIn,
                     CustomFlowOutPinTemplate = customOut,
@@ -330,6 +336,48 @@ namespace oxs.Commands.Flow
 
             try { ctx.Unload(); } catch { }
             return list;
+        }
+
+        private string? GetEmbeddedMarkdown(Assembly assembly, string className)
+        {
+            try
+            {
+                var resourceName = $"{className}.md";
+                var resourceNames = assembly.GetManifestResourceNames();
+                
+                // Look for exact match first
+                var exactMatch = resourceNames.FirstOrDefault(name => name.EndsWith(resourceName, StringComparison.OrdinalIgnoreCase));
+                if (exactMatch != null)
+                {
+                    using var stream = assembly.GetManifestResourceStream(exactMatch);
+                    if (stream != null)
+                    {
+                        using var reader = new StreamReader(stream);
+                        return reader.ReadToEnd();
+                    }
+                }
+
+                // Look for any .md file that contains the class name
+                var partialMatch = resourceNames.FirstOrDefault(name => 
+                    name.Contains(className, StringComparison.OrdinalIgnoreCase) && 
+                    name.EndsWith(".md", StringComparison.OrdinalIgnoreCase));
+                
+                if (partialMatch != null)
+                {
+                    using var stream = assembly.GetManifestResourceStream(partialMatch);
+                    if (stream != null)
+                    {
+                        using var reader = new StreamReader(stream);
+                        return reader.ReadToEnd();
+                    }
+                }
+            }
+            catch
+            {
+                // Silently ignore any errors when trying to read embedded resources
+            }
+
+            return null;
         }
     }
 }
