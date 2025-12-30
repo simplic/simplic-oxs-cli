@@ -1,10 +1,7 @@
-﻿using oxs.Clients;
-using oxs.Commands.Configure;
+﻿using oxs.Commands.Configure;
 using oxs.Commands.Package;
 using oxs.Commands.Project;
-using Spectre.Console;
 using Spectre.Console.Cli;
-using System.ComponentModel;
 
 namespace oxs;
 

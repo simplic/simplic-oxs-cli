@@ -1,12 +1,11 @@
-﻿using Spectre.Console;
+﻿using oxs.Configuration;
+using Simplic.OxS.Flow.Meta;
+using Spectre.Console;
 using Spectre.Console.Cli;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using oxs.Configuration;
-using Simplic.OxS.Flow.Meta;
-using System.Diagnostics;
 
 namespace oxs.Commands.Flow;
 
@@ -151,17 +150,17 @@ public class NodePackage
     /// Gets or sets the name of the package.
     /// </summary>
     public string? Name { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the version of the package.
     /// </summary>
     public string? Version { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the assembly name containing the node.
     /// </summary>
     public string? AssemblyName { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the class name of the node.
     /// </summary>
@@ -171,81 +170,81 @@ public class NodePackage
 /// <summary>
 /// Represents a data input pin definition for a flow node.
 /// </summary>
-public class DataInPinDefinition 
-{ 
+public class DataInPinDefinition
+{
     /// <summary>
     /// Gets or sets the name of the data input pin.
     /// </summary>
-    public string? Name { get; set; } 
-    
+    public string? Name { get; set; }
+
     /// <summary>
     /// Gets or sets the data type of the input pin.
     /// </summary>
-    public string? Type { get; set; } 
-    
+    public string? Type { get; set; }
+
     /// <summary>
     /// Gets or sets a value indicating whether this pin is required.
     /// </summary>
-    public bool Required { get; set; } 
-    
+    public bool Required { get; set; }
+
     /// <summary>
     /// Gets or sets a value indicating whether this pin can accept null values.
     /// </summary>
-    public bool CanBeNull { get; set; } 
+    public bool CanBeNull { get; set; }
 }
 
 /// <summary>
 /// Represents a data output pin definition for a flow node.
 /// </summary>
-public class DataOutPinDefinition 
-{ 
+public class DataOutPinDefinition
+{
     /// <summary>
     /// Gets or sets the name of the data output pin.
     /// </summary>
-    public string? Name { get; set; } 
-    
+    public string? Name { get; set; }
+
     /// <summary>
     /// Gets or sets the data type of the output pin.
     /// </summary>
-    public string? Type { get; set; } 
+    public string? Type { get; set; }
 }
 
 /// <summary>
 /// Represents a flow output pin definition for a flow node.
 /// </summary>
-public class FlowOutPinDefinition 
-{ 
+public class FlowOutPinDefinition
+{
     /// <summary>
     /// Gets or sets the name of the flow output pin.
     /// </summary>
-    public string? Name { get; set; } 
+    public string? Name { get; set; }
 }
 
 /// <summary>
 /// Represents a custom data input pin template definition.
 /// </summary>
-public class CustomDataInPinTemplateDefinition 
-{ 
+public class CustomDataInPinTemplateDefinition
+{
     /// <summary>
     /// Gets or sets the data type for the custom input pin template.
     /// </summary>
-    public string? Type { get; set; } 
-    
+    public string? Type { get; set; }
+
     /// <summary>
     /// Gets or sets a value indicating whether the custom input pin is required.
     /// </summary>
-    public bool Required { get; set; } 
+    public bool Required { get; set; }
 }
 
 /// <summary>
 /// Represents a custom flow output pin template definition.
 /// </summary>
-public class CustomFlowOutPinTemplateDefinition 
-{ 
+public class CustomFlowOutPinTemplateDefinition
+{
     /// <summary>
     /// Gets or sets the name of the custom flow output pin template.
     /// </summary>
-    public string? Name { get; set; } 
+    public string? Name { get; set; }
 }
 
 /// <summary>
@@ -257,67 +256,67 @@ public class NodeDefinition
     /// Gets or sets the unique identifier of the node.
     /// </summary>
     public string? Id { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the type of the node.
     /// </summary>
     public string Type { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the display name of the node.
     /// </summary>
     public string? DisplayName { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the display key for localization.
     /// </summary>
     public string? DisplayKey { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the description of the node.
     /// </summary>
     public string? Description { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the markdown documentation for the node.
     /// </summary>
     public string? Markdown { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the target platform or execution environment.
     /// </summary>
     public string Target { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the custom data input pin template configuration.
     /// </summary>
     public CustomDataInPinTemplateDefinition? CustomDataInPinTemplate { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the custom flow output pin template configuration.
     /// </summary>
     public CustomFlowOutPinTemplateDefinition? CustomFlowOutPinTemplate { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the array of data input pin definitions.
     /// </summary>
     public DataInPinDefinition[]? DataInPins { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the array of data output pin definitions.
     /// </summary>
     public DataOutPinDefinition[]? DataOutPins { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the array of flow output pin definitions.
     /// </summary>
     public FlowOutPinDefinition[]? FlowOutPins { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the package information for the node.
     /// </summary>
     public NodePackage? Package { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the event name associated with the node.
     /// </summary>
@@ -333,67 +332,67 @@ public class PostNodeDefinitionRequest
     /// Gets or sets the unique identifier of the node.
     /// </summary>
     public string? Id { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the type of the node.
     /// </summary>
     public string Type { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the event name associated with the node.
     /// </summary>
     public string? EventName { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the display name of the node.
     /// </summary>
     public string? DisplayName { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the display key for localization.
     /// </summary>
     public string? DisplayKey { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the description of the node.
     /// </summary>
     public string? Description { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the markdown documentation for the node.
     /// </summary>
     public string? Markdown { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the target platform or execution environment.
     /// </summary>
     public string Target { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the custom data input pin template configuration.
     /// </summary>
     public CustomDataInPinTemplateDefinition? CustomDataInPinTemplate { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the custom flow output pin template configuration.
     /// </summary>
     public CustomFlowOutPinTemplateDefinition? CustomFlowOutPinTemplate { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the array of data input pin definitions.
     /// </summary>
     public DataInPinDefinition[]? DataInPins { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the array of data output pin definitions.
     /// </summary>
     public DataOutPinDefinition[]? DataOutPins { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the array of flow output pin definitions.
     /// </summary>
     public FlowOutPinDefinition[]? FlowOutPins { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the package information for the node.
     /// </summary>
@@ -556,8 +555,8 @@ public class NodeDefinitionAnalyzer
 
             // Try to get embedded markdown content, fallback to generated markdown
             var embeddedMarkdown = GetEmbeddedMarkdown(asm, t.Name);
-            var markdown = !string.IsNullOrWhiteSpace(embeddedMarkdown) 
-                ? embeddedMarkdown 
+            var markdown = !string.IsNullOrWhiteSpace(embeddedMarkdown)
+                ? embeddedMarkdown
                 : $"# {displayName ?? t.Name}\n\nNode ID: `{id}`\nType: `{t.FullName}`";
 
             var def = new NodeDefinition
@@ -597,7 +596,7 @@ public class NodeDefinitionAnalyzer
         {
             var resourceName = $"{className}.md";
             var resourceNames = assembly.GetManifestResourceNames();
-            
+
             // Look for exact match first
             var exactMatch = resourceNames.FirstOrDefault(name => name.EndsWith(resourceName, StringComparison.OrdinalIgnoreCase));
             if (exactMatch != null)
@@ -611,10 +610,10 @@ public class NodeDefinitionAnalyzer
             }
 
             // Look for any .md file that contains the class name
-            var partialMatch = resourceNames.FirstOrDefault(name => 
-                name.Contains(className, StringComparison.OrdinalIgnoreCase) && 
+            var partialMatch = resourceNames.FirstOrDefault(name =>
+                name.Contains(className, StringComparison.OrdinalIgnoreCase) &&
                 name.EndsWith(".md", StringComparison.OrdinalIgnoreCase));
-            
+
             if (partialMatch != null)
             {
                 using var stream = assembly.GetManifestResourceStream(partialMatch);

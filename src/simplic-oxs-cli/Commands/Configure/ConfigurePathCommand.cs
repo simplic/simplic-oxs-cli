@@ -1,4 +1,3 @@
-using Microsoft.Win32;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.Security.Principal;
@@ -67,7 +66,7 @@ public class ConfigurePathCommand : Command<ConfigurePathSettings>
             var pathEntries = currentPath.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList();
 
             // Check if CLI directory is already in PATH
-            var cliDirectoryInPath = pathEntries.Any(entry => 
+            var cliDirectoryInPath = pathEntries.Any(entry =>
                 string.Equals(entry.Trim(), cliDirectory, StringComparison.OrdinalIgnoreCase));
 
             if (settings.Remove)
@@ -79,7 +78,7 @@ public class ConfigurePathCommand : Command<ConfigurePathSettings>
                 }
 
                 // Remove CLI directory from PATH
-                pathEntries.RemoveAll(entry => 
+                pathEntries.RemoveAll(entry =>
                     string.Equals(entry.Trim(), cliDirectory, StringComparison.OrdinalIgnoreCase));
 
                 var newPath = string.Join(";", pathEntries);
@@ -114,7 +113,7 @@ public class ConfigurePathCommand : Command<ConfigurePathSettings>
             // Verify the change
             var updatedPath = Environment.GetEnvironmentVariable("PATH", target) ?? string.Empty;
             var updatedEntries = updatedPath.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            var isNowInPath = updatedEntries.Any(entry => 
+            var isNowInPath = updatedEntries.Any(entry =>
                 string.Equals(entry.Trim(), cliDirectory, StringComparison.OrdinalIgnoreCase));
 
             if (settings.Remove && isNowInPath)
@@ -169,7 +168,7 @@ public class ConfigurePathCommand : Command<ConfigurePathSettings>
             // Refresh PATH for current process by combining machine and user PATH
             var machinePath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine) ?? string.Empty;
             var userPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? string.Empty;
-            
+
             var combinedPath = string.IsNullOrEmpty(userPath) ? machinePath : $"{machinePath};{userPath}";
             Environment.SetEnvironmentVariable("PATH", combinedPath, EnvironmentVariableTarget.Process);
         }
