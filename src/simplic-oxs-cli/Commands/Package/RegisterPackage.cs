@@ -1,12 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Spectre.Console.Cli;
 
 namespace oxs.Commands.Package
 {
-    internal class RegisterPackage
+    internal static class RegisterPackage
     {
+        public static void RegisterCommands(IConfigurator config)
+        {
+            config.AddBranch<PackageSettings>("package", add =>
+            {
+                add.AddCommand<PackageInstallCommand>("install");
+            });
+        }
     }
 }

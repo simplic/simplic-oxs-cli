@@ -7,6 +7,6 @@ namespace oxs.Commands.Project
     {
         [Description("Build output directory where zip files will be created")]
         [CommandOption("-b|--build-dir <Path>")]
-        public string? BuildDirectory { get; set; } = "./build";
+        public string? BuildDirectory { get; set; } = "./.build";
     }
 }

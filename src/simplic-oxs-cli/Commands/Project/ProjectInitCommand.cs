@@ -97,9 +97,9 @@ namespace oxs.Commands.Project
                 version = "1.0.0",
                 scripts = new
                 {
-                    clean = "oxs project clean --build-dir ./build",
-                    build = "oxs project build --build-dir ./build",
-                    deploy = $"oxs project deploy --artifact ./build/*.zip --section {settings.Section}"
+                    clean = "oxs project clean --build-dir ./.build",
+                    build = "oxs project build --build-dir ./.build",
+                    deploy = $"oxs project deploy --artifact ./.build/*.zip --section {settings.Section}"
                 }
             };
 
