@@ -10,6 +10,7 @@ namespace oxs.Commands.Configure
             config.AddBranch<ConfigureSettings>("configure", add =>
             {
                 add.AddCommand<ConfigureEnvCommand>("env");
+                add.AddCommand<ConfigurePathCommand>("path");
             });
 
             config.AddCommand<HttpCommand>("http");
