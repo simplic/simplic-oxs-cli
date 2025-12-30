@@ -126,9 +126,20 @@ jobs:
         ### Option 2: Manual Install
         1. Copy `oxs` to a directory in your PATH (e.g., `/usr/local/bin` or `~/.local/bin`)
         2. Make it executable: `chmod +x oxs`
+        3. Configure PATH: `oxs configure path --user`
+
+        ## Configuration
+        After installation, configure your OXS environment:
+        ```bash
+        # Add oxs to your PATH (if not using installer)
+        oxs configure path --user
+        
+        # Configure your OXS environment
+        oxs configure env
+        ```
 
         ## Usage
-        After installation, you can use the `oxs` command from any location in your terminal.
+        After installation and configuration, you can use the `oxs` command from any location in your terminal.
         EOF
         
         # Place zip at repository root
@@ -262,32 +273,12 @@ jobs:
         $exePath = Join-Path $InstallPath "oxs.exe"
         Copy-Item "oxs.exe" $exePath -Force
 
-        # Add to PATH if not already present
-        $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
-        if ($currentPath -notlike "*$InstallPath*") {
-            $newPath = if ($currentPath) { "$currentPath;$InstallPath" } else { $InstallPath }
-            [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
-            Write-Host "Added $InstallPath to user PATH" -ForegroundColor Green
-        }
-
-        # Create uninstaller
-        $uninstallerPath = Join-Path $InstallPath "uninstall.ps1"
-        @"
-        # OXS CLI Uninstaller
-        Write-Host "Uninstalling OXS CLI..." -ForegroundColor Yellow
-        Remove-Item "$InstallPath" -Recurse -Force -ErrorAction SilentlyContinue
-        
-        # Remove from PATH
-        `$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
-        `$newPath = (`$currentPath -split ";") | Where-Object { `$_ -ne "$InstallPath" }
-        [Environment]::SetEnvironmentVariable("Path", (`$newPath -join ";"), "User")
-        
-        Write-Host "OXS CLI uninstalled successfully" -ForegroundColor Green
-        "@ | Out-File $uninstallerPath -Encoding UTF8
-
         Write-Host "Installation completed successfully!" -ForegroundColor Green
-        Write-Host "You can now use 'oxs' command from any location (restart your terminal)" -ForegroundColor Cyan
-        Write-Host "To uninstall, run: powershell -ExecutionPolicy Bypass -File `"$uninstallerPath`"" -ForegroundColor Gray
+        Write-Host "" 
+        Write-Host "Next steps:" -ForegroundColor Yellow
+        Write-Host "1. Add oxs to your PATH: $exePath configure path --user" -ForegroundColor Cyan
+        Write-Host "2. Configure your environment: oxs configure env" -ForegroundColor Cyan
+        Write-Host "3. Restart your terminal" -ForegroundColor Cyan
         EOF
 
     - name: Create Windows package
@@ -303,20 +294,27 @@ jobs:
         ## Installation
 
         ### Option 1: Quick Install (Recommended)
-        Run the following command in PowerShell (as Administrator):
+        Run the following command in PowerShell:
         ```powershell
         powershell -ExecutionPolicy Bypass -File .\install.ps1
         ```
 
         ### Option 2: Manual Install
-        1. Copy `oxs.exe` to a directory of your choice
-        2. Add that directory to your PATH environment variable
+        1. Copy `oxs.exe` to a directory of your choice (e.g., `C:\Tools\oxs\`)
+        2. Configure PATH: `oxs.exe configure path --user`
+
+        ## Configuration
+        After installation, configure your OXS environment:
+        ```cmd
+        # Add oxs to your PATH (if not done during installation)
+        oxs configure path --user
+        
+        # Configure your OXS environment
+        oxs configure env
+        ```
 
         ## Usage
-        After installation, you can use the `oxs` command from any location in your terminal.
-
-        ## Uninstallation
-        If you used the installer, you can uninstall by running the uninstall script created during installation.
+        After installation and configuration, you can use the `oxs` command from any location in your terminal.
         EOF
         
         # Place zip at repository root
@@ -429,11 +427,16 @@ jobs:
           #### Windows (Recommended)
           1. Download the Windows x64 package
           2. Extract the zip file
-          3. Run `install.ps1` in PowerShell as Administrator:
+          3. Run `install.ps1` in PowerShell:
              ```powershell
              powershell -ExecutionPolicy Bypass -File .\install.ps1
              ```
-          4. Restart your terminal and use `oxs` command
+          4. Configure PATH and environment:
+             ```cmd
+             oxs configure path --user
+             oxs configure env
+             ```
+          5. Restart your terminal and use `oxs` command
           
           #### Linux
           1. Download the Linux x64 package
@@ -443,7 +446,20 @@ jobs:
              chmod +x install.sh
              ./install.sh
              ```
-          4. Restart your terminal and use `oxs` command
+          4. Configure your environment:
+             ```bash
+             oxs configure env
+             ```
+          5. Restart your terminal and use `oxs` command
+          
+          ### Quick Setup After Installation
+          ```bash
+          # Configure PATH (if needed)
+          oxs configure path --user
+          
+          # Configure your OXS environment (API endpoint, credentials, organization)
+          oxs configure env
+          ```
           
           ### What's New
           ${{ steps.release_notes.outputs.WHATS_NEW }}

@@ -28,3 +28,7 @@
 # 1.0.8
 
 - Extend `oxs package install` command to support installing packages from directory artifacts.
+
+- 1.0.9
+
+- Improve readme and documentation for oxs-cli tool.
