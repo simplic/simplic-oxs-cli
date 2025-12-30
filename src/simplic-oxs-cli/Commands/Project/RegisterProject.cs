@@ -9,6 +9,10 @@ namespace oxs.Commands.Project
             config.AddBranch<ProjectSettings>("project", add =>
             {
                 add.AddCommand<ProjectInitCommand>("init");
+                add.AddCommand<ProjectBuildCommand>("build");
+                add.AddCommand<ProjectCleanCommand>("clean");
+                add.AddCommand<ProjectDeployCommand>("deploy");
+                add.AddCommand<ProjectRunCommand>("run");
             });
         }
     }
