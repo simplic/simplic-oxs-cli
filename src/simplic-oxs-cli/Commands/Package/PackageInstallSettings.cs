@@ -13,6 +13,10 @@ namespace oxs.Commands.Package
         [CommandOption("--version <Version>")]
         public string? Version { get; set; }
 
+        [Description("Directory containing package artifacts (*.zip files with format: <package-id>-<version>.zip)")]
+        [CommandOption("--artifact <ArtifactDirectory>")]
+        public string? ArtifactDirectory { get; set; }
+
         [Description("Configuration section to use for installation")]
         [CommandOption("-s|--section <Section>")]
         public string Section { get; set; } = "default";

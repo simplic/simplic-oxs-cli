@@ -24,3 +24,7 @@
 - `oxs project deploy`: Deploys the current oxs project.
 - `oxs project run`: Runs the current oxs project. 
 - `oxs package install`: Deploys the current oxs project.
+
+# 1.0.8
+
+- Extend `oxs package install` command to support installing packages from directory artifacts.

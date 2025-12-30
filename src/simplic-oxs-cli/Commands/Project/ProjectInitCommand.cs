@@ -99,7 +99,8 @@ namespace oxs.Commands.Project
                 {
                     clean = "oxs project clean --build-dir ./.build",
                     build = "oxs project build --build-dir ./.build",
-                    deploy = $"oxs project deploy --artifact ./.build/*.zip --section {settings.Section}"
+                    deploy = $"oxs project deploy --artifact ./.build/*.zip --section {settings.Section}",
+                    install = $"oxs package install --artifact ./.build --section {settings.Section}"
                 }
             };
 
