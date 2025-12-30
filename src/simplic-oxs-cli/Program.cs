@@ -1,5 +1,6 @@
 ﻿using oxs.Clients;
 using oxs.Commands.Configure;
+using oxs.Commands.Package;
 using oxs.Commands.Project;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -17,6 +18,7 @@ public static class Program
         {
             RegisterConfigure.RegisterCommands(config);
             RegisterProject.RegisterCommands(config);
+            RegisterPackage.RegisterCommands(config);
         });
 
         return app.Run(args);
