@@ -19,10 +19,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Commands\Auth\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="ini-parser" Version="3.4.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Simplic.OxS.Flow.Meta" Version="1.0.525.1215" />

@@ -1,24 +1,30 @@
 ﻿using oxs.Commands.Http;
 using Spectre.Console.Cli;
 
-namespace oxs.Commands.Configure
+namespace oxs.Commands.Configure;
+
+/// <summary>
+/// Provides registration methods for configuration-related commands in the CLI application.
+/// </summary>
+internal static class RegisterConfigure
 {
-    internal static class RegisterConfigure
+    /// <summary>
+    /// Registers all configuration commands including configure, http, and flow commands with the CLI configurator.
+    /// </summary>
+    /// <param name="config">The configurator to register commands with.</param>
+    public static void RegisterCommands(IConfigurator config)
     {
-        public static void RegisterCommands(IConfigurator config)
+        config.AddBranch<ConfigureSettings>("configure", add =>
         {
-            config.AddBranch<ConfigureSettings>("configure", add =>
-            {
-                add.AddCommand<ConfigureEnvCommand>("env");
-                add.AddCommand<ConfigurePathCommand>("path");
-            });
+            add.AddCommand<ConfigureEnvCommand>("env");
+            add.AddCommand<ConfigurePathCommand>("path");
+        });
 
-            config.AddCommand<HttpCommand>("http");
+        config.AddCommand<HttpCommand>("http");
 
-            config.AddBranch<Flow.FlowSettings>("flow", add =>
-            {
-                add.AddCommand<Flow.FlowPushNodeDefCommand>("push-node-def");
-            });
-        }
+        config.AddBranch<Flow.FlowSettings>("flow", add =>
+        {
+            add.AddCommand<Flow.FlowPushNodeDefCommand>("push-node-def");
+        });
     }
 }
