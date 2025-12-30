@@ -1,4 +1,4 @@
-using Spectre.Console;
+﻿using Spectre.Console;
 using Spectre.Console.Cli;
 using System.IO.Compression;
 using System.Text.Json;
@@ -34,7 +34,7 @@ namespace oxs.Commands.Project
             }
 
             // Create build directory if it doesn't exist
-            var buildDirectory = Path.GetFullPath(settings.BuildDirectory ?? "./build");
+            var buildDirectory = Path.GetFullPath(settings.BuildDirectory ?? "./.build");
             if (!Directory.Exists(buildDirectory))
             {
                 try
@@ -71,7 +71,7 @@ namespace oxs.Commands.Project
                     if (result)
                     {
                         processedCount++;
-                        AnsiConsole.MarkupLine($"[green]?[/] Processed package: [yellow]{Path.GetFileName(packageDir)}[/]");
+                        AnsiConsole.MarkupLine($"[green]✓[/] Processed package: [yellow]{Path.GetFileName(packageDir)}[/]");
                     }
                 }
                 catch (Exception ex)

@@ -1,4 +1,4 @@
-using Spectre.Console;
+﻿using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace oxs.Commands.Project
@@ -12,7 +12,7 @@ namespace oxs.Commands.Project
 
         private async Task<int> ExecuteAsync(CommandContext context, ProjectCleanSettings settings, CancellationToken cancellationToken)
         {
-            var buildDirectory = Path.GetFullPath(settings.BuildDirectory ?? "./build");
+            var buildDirectory = Path.GetFullPath(settings.BuildDirectory ?? "./.build");
 
             AnsiConsole.MarkupLine($"[blue]Cleaning build directory:[/] [yellow]{buildDirectory}[/]");
 
@@ -58,16 +58,16 @@ namespace oxs.Commands.Project
                         if (!Directory.GetFileSystemEntries(buildDirectory).Any())
                         {
                             Directory.Delete(buildDirectory);
-                            AnsiConsole.MarkupLine("[green]?[/] Build directory removed completely");
+                            AnsiConsole.MarkupLine("[green]✓[/] Build directory removed completely");
                         }
                         else
                         {
-                            AnsiConsole.MarkupLine("[green]?[/] Build directory cleaned (some files/directories could not be removed)");
+                            AnsiConsole.MarkupLine("[green]✓[/] Build directory cleaned (some files/directories could not be removed)");
                         }
                     }
                     catch
                     {
-                        AnsiConsole.MarkupLine("[green]?[/] Build directory cleaned");
+                        AnsiConsole.MarkupLine("[green]✓[/] Build directory cleaned");
                     }
                 }
                 else
