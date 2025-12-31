@@ -4,9 +4,9 @@ using Spectre.Console.Cli;
 namespace oxs.Commands.Configure;
 
 /// <summary>
-/// Provides registration methods for configuration-related commands in the CLI application.
+/// Register http commands
 /// </summary>
-internal static class RegisterConfigure
+internal static class RegisterHttp
 {
     /// <summary>
     /// Registers all configuration commands including configure, http, and flow commands with the CLI configurator.
@@ -14,10 +14,6 @@ internal static class RegisterConfigure
     /// <param name="config">The configurator to register commands with.</param>
     public static void RegisterCommands(IConfigurator config)
     {
-        config.AddBranch<ConfigureSettings>("configure", add =>
-        {
-            add.AddCommand<ConfigureEnvCommand>("env");
-            add.AddCommand<ConfigurePathCommand>("path");
-        });
+        config.AddCommand<HttpCommand>("http");
     }
 }

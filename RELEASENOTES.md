@@ -32,3 +32,11 @@
 # 1.0.10
 
 - Improve readme and documentation for oxs-cli tool.
+
+# 1.0.11
+
+- Add `oxs manifest init` to create a new manifest file
+
+# 1.0.12
+
+- Add `oxs manifest list-templates` 

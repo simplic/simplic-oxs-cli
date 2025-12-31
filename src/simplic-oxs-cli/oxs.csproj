@@ -10,13 +10,22 @@
     <Product>OXS CLI Tool</Product>
     <Description>Command line interface for OXS operations</Description>
     <Copyright>Copyright � 2025</Copyright>
-    <Version>1.0.10</Version>
-    <AssemblyVersion>1.0.10</AssemblyVersion>
-    <FileVersion>1.0.10</FileVersion>
+    <Version>1.0.12</Version>
+    <AssemblyVersion>1.0.12</AssemblyVersion>
+    <FileVersion>1.0.12</FileVersion>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Commands\Manifest\Templates\template.shipment.status.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Commands\Manifest\Templates\logistics.shipment.status\template.shipment.status.json" />
+    <EmbeddedResource Include="Commands\Manifest\Templates\logistics.shipment.status\README.md" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="ini-parser" Version="3.4.0" />

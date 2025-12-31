@@ -1,4 +1,7 @@
 ﻿using oxs.Commands.Configure;
+using oxs.Commands.Flow;
+using oxs.Commands.Http;
+using oxs.Commands.Manifest;
 using oxs.Commands.Package;
 using oxs.Commands.Project;
 using Spectre.Console.Cli;
@@ -22,6 +25,9 @@ public static class Program
         app.Configure(config =>
         {
             RegisterConfigure.RegisterCommands(config);
+            RegisterHttp.RegisterCommands(config);
+            RegisterFlow.RegisterCommands(config);
+            RegisterManifest.RegisterCommands(config);
             RegisterProject.RegisterCommands(config);
             RegisterPackage.RegisterCommands(config);
         });

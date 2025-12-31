@@ -1,0 +1,21 @@
+﻿{
+  "id": "ext.logistics.shipment-status.<name>",
+  "version": 1,
+  "type": "shipment.status",
+  "endpoint": "simplic-oxs-logistics/logistics-api/v2/ShipmentStatusDeployment",
+  "dependencies": [],
+  "continueOnError": false,
+  "patches": [
+
+  ],
+  "Data": {
+    "name": "<status-name>",
+    "number": "<status-number-name>",
+    "roles": [
+      "<roles:optional>"
+    ],
+    "hexColor": "<hex-color:default=#0000FF>",
+    "orderNr": "<order-nr:optional:default=0>",
+    "resolver": "<resolver:optional>"
+  }
+}
