@@ -10,9 +10,9 @@
     <Product>OXS CLI Tool</Product>
     <Description>Command line interface for OXS operations</Description>
     <Copyright>Copyright � 2025</Copyright>
-    <Version>1.0.12</Version>
-    <AssemblyVersion>1.0.12</AssemblyVersion>
-    <FileVersion>1.0.12</FileVersion>
+    <Version>1.0.13</Version>
+    <AssemblyVersion>1.0.13</AssemblyVersion>
+    <FileVersion>1.0.13</FileVersion>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>

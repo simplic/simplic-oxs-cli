@@ -4,6 +4,7 @@ using oxs.Commands.Http;
 using oxs.Commands.Manifest;
 using oxs.Commands.Package;
 using oxs.Commands.Project;
+using oxs.Commands.Service;
 using Spectre.Console.Cli;
 
 namespace oxs;
@@ -30,6 +31,7 @@ public static class Program
             RegisterManifest.RegisterCommands(config);
             RegisterProject.RegisterCommands(config);
             RegisterPackage.RegisterCommands(config);
+            RegisterService.RegisterCommands(config);
         });
 
         return app.Run(args);

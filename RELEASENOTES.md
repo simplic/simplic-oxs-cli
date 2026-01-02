@@ -40,3 +40,19 @@
 # 1.0.12
 
 - Add `oxs manifest list-templates` 
+
+# 1.0.13
+
+- Add `oxs service get-definition -e <endpoint> -v <version>` command to download service definitions from OXS API
+  - `-e/--endpoint` - Service endpoint (e.g., document, storage-management, provider-rossum)
+  - `-v/--version` - Service version (e.g., v1, v2)
+  - `-s/--section` - Configuration section (default: default)
+  - `-o/--output` - Output directory (default: current directory)
+  - Downloads service definition JSON
+  - Downloads and saves Swagger/OpenAPI specification (swagger.json)
+  - Downloads and saves model definition (model-definition.json)
+  - Extracts and saves gRPC proto files
+  - Saves GraphQL schemas
+  - Creates organized folder structure by service name and version
+
+
