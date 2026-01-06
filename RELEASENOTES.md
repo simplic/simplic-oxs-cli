@@ -60,4 +60,9 @@
 - Update dependencies to latest versions.
 - Add debug output for push-node-def command.
 
+# 1.0.15
 
+- Add `oxs report` commands:
+  - `oxs report list` - Lists available reports.
+  - `oxs report download -n <report-name> -f <report-file>` - Downloads a specific report
+  - `oxs report upload -n <report-name> -f <report-file>` - Uploads a report
