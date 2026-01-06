@@ -55,4 +55,9 @@
   - Saves GraphQL schemas
   - Creates organized folder structure by service name and version
 
+# 1.0.14
+
+- Update dependencies to latest versions.
+- Add debug output for push-node-def command.
+
 

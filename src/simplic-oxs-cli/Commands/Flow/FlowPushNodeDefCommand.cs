@@ -75,17 +75,19 @@ public class FlowPushNodeDefCommand : Command<FlowPushNodeDefSettings>
         List<NodeDefinition> defs;
         try
         {
-            defs = analyzer.AnalyzeAssembly(settings.DllPath);
+            defs = analyzer.AnalyzeAssembly(settings.DllPath, verbose: true);
         }
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine($"[red]Failed to analyze assembly:[/] {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Stack trace:[/] {ex.StackTrace}");
             return 1;
         }
 
         if (defs.Count == 0)
         {
             AnsiConsole.MarkupLine("[yellow]No flow node definitions found.[/]");
+            AnsiConsole.MarkupLine("[dim]Hint: Ensure your classes are decorated with [[FlowNodeMeta]] attribute.[/]");
             return 0;
         }
 
@@ -463,9 +465,10 @@ public class NodeDefinitionAnalyzer
     /// Analyzes the specified assembly and extracts all flow node definitions.
     /// </summary>
     /// <param name="assemblyPath">The path to the assembly file to analyze.</param>
+    /// <param name="verbose">If true, outputs detailed diagnostic information.</param>
     /// <returns>A list of node definitions found in the assembly.</returns>
     /// <exception cref="Exception">Thrown when the assembly cannot be loaded or analyzed.</exception>
-    public List<NodeDefinition> AnalyzeAssembly(string assemblyPath)
+    public List<NodeDefinition> AnalyzeAssembly(string assemblyPath, bool verbose = false)
     {
         var list = new List<NodeDefinition>();
         var ctx = new AssemblyLoadContext("FlowNodeDef", isCollectible: true);
@@ -473,6 +476,11 @@ public class NodeDefinitionAnalyzer
         try
         {
             asm = ctx.LoadFromAssemblyPath(Path.GetFullPath(assemblyPath));
+            if (verbose)
+            {
+                AnsiConsole.MarkupLine($"[dim]Loaded assembly: {asm.GetName().Name} v{asm.GetName().Version}[/]");
+                AnsiConsole.MarkupLine($"[dim]Assembly location: {asm.Location}[/]");
+            }
         }
         catch (Exception ex)
         {
@@ -480,16 +488,63 @@ public class NodeDefinitionAnalyzer
         }
 
         Type[] types;
-        try { types = asm.GetTypes(); }
-        catch (ReflectionTypeLoadException ex) { types = ex.Types.Where(t => t != null)!.Cast<Type>().ToArray(); }
+        try 
+        { 
+            types = asm.GetTypes();
+            if (verbose)
+                AnsiConsole.MarkupLine($"[dim]Found {types.Length} type(s) in assembly[/]");
+        }
+        catch (ReflectionTypeLoadException ex) 
+        { 
+            types = ex.Types.Where(t => t != null)!.Cast<Type>().ToArray();
+            if (verbose)
+            {
+                AnsiConsole.MarkupLine($"[yellow]Warning: Some types could not be loaded. Processing {types.Length} available types.[/]");
+                if (ex.LoaderExceptions != null)
+                {
+                    foreach (var loaderEx in ex.LoaderExceptions.Take(3))
+                    {
+                        if (loaderEx != null)
+                            AnsiConsole.MarkupLine($"[dim]Loader exception: {loaderEx.Message}[/]");
+                    }
+                }
+            }
+        }
+
+        int abstractCount = 0, interfaceCount = 0, genericCount = 0, noAttributeCount = 0;
 
         foreach (var t in types)
         {
-            if (t == null || t.IsAbstract || t.IsInterface || t.IsGenericTypeDefinition)
+            if (t == null) 
                 continue;
 
+            if (t.IsAbstract)
+            {
+                abstractCount++;
+                continue;
+            }
+
+            if (t.IsInterface)
+            {
+                interfaceCount++;
+                continue;
+            }
+
+            if (t.IsGenericTypeDefinition)
+            {
+                genericCount++;
+                continue;
+            }
+
             var meta = t.GetCustomAttribute<FlowNodeMetaAttribute>();
-            if (meta == null) continue;
+            if (meta == null)
+            {
+                noAttributeCount++;
+                continue;
+            }
+
+            if (verbose)
+                AnsiConsole.MarkupLine($"[green]✓ Found flow node:[/] [cyan]{t.FullName ?? t.Name}[/]");
 
             string id = meta.Id ?? t.FullName ?? t.Name;
             var nodeType = meta.Type;
@@ -578,6 +633,19 @@ public class NodeDefinitionAnalyzer
             };
 
             list.Add(def);
+        }
+
+        if (verbose)
+        {
+            AnsiConsole.MarkupLine($"[dim]─────────────────────────────────────[/]");
+            AnsiConsole.MarkupLine($"[dim]Summary:[/]");
+            AnsiConsole.MarkupLine($"[dim]  Total types scanned: {types.Length}[/]");
+            AnsiConsole.MarkupLine($"[dim]  Abstract classes: {abstractCount}[/]");
+            AnsiConsole.MarkupLine($"[dim]  Interfaces: {interfaceCount}[/]");
+            AnsiConsole.MarkupLine($"[dim]  Generic definitions: {genericCount}[/]");
+            AnsiConsole.MarkupLine($"[dim]  Classes without [[FlowNodeMeta]]: {noAttributeCount}[/]");
+            AnsiConsole.MarkupLine($"[dim]  Flow node definitions found: {list.Count}[/]");
+            AnsiConsole.MarkupLine($"[dim]─────────────────────────────────────[/]");
         }
 
         try { ctx.Unload(); } catch { }
